@@ -13,7 +13,6 @@ import 'package:producao_app/services/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-
   static String jsessionid = '';
   static String _servidor = '';
   static String _usuario = '';
@@ -23,15 +22,16 @@ class ApiService {
   static Future<void> SyncDados() async {
     //final dbService = DatabaseHelper();
     //final confconn  = await dbService.getConfconn();
-    
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-    _usuario  = prefs.getString('api_usuario') ?? 'iranildo';
-    _senha    = prefs.getString('api_senha') ?? '123456';
+    _usuario = prefs.getString('api_usuario') ?? 'iranildo';
+    _senha = prefs.getString('api_senha') ?? '123456';
 
-    String _url = '${_servidor}/mge/service.sbr?serviceName=MobileLoginSP.login';
+    String _url =
+        '${_servidor}/mge/service.sbr?serviceName=MobileLoginSP.login';
 
-    String xmlBody  = '''<?xml version="1.0" encoding="UTF-8"?>
+    String xmlBody = '''<?xml version="1.0" encoding="UTF-8"?>
                           <serviceRequest serviceName="MobileLoginSP.login">
                             <requestBody>
                               <NOMUSU>${_usuario}</NOMUSU>
@@ -48,13 +48,14 @@ class ApiService {
         body: utf8.encode(xmlBody),
       );
 
-
       if (response.statusCode == 200) {
         final document = xml.XmlDocument.parse(response.body);
-        final serviceResponse = document.findAllElements('serviceResponse').first;
+        final serviceResponse =
+            document.findAllElements('serviceResponse').first;
         final status = serviceResponse.getAttribute('status');
         if (status == "1") {
-          jsessionid = 'JSESSIONID=${document.findAllElements('jsessionid').first.text}';
+          jsessionid =
+              'JSESSIONID=${document.findAllElements('jsessionid').first.text}';
           ParceiroSync();
         } else {
           print('Usuário ou senha invalido!!!');
@@ -71,7 +72,8 @@ class ApiService {
     final DatabaseHelper _dbHelper = DatabaseHelper();
 
     var _url = '';
-    _url = '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
+    _url =
+        '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
 
     const String Body = '''
                         {"serviceName":"DbExplorerSP.executeQuery",
@@ -84,7 +86,7 @@ class ApiService {
     try {
       final headers = {
         'Content-Type': 'application/json',
-        'Cookie':jsessionid
+        'Cookie': jsessionid
       };
 
       final response = await http.post(
@@ -102,24 +104,15 @@ class ApiService {
 
           await _dbHelper.deleteCentrotrabAll();
 
-          for (var i=0; i < _rows.length; i++) {
-
-            //print('Código: ${_rows[i][0]}');
-            print('Parceiro: ${_rows[i][1]}');        
+          for (var i = 0; i < _rows.length; i++) {
+            print('Parceiro: ${_rows[i][1]}');
 
             // limpa todos os Parceiros
-            
-            
-            final _centro = Centrotrab(     id: _rows[i][0]
-                                    ,     nome: _rows[i][1]
-                                    );
+            final _centro = Centrotrab(id: _rows[i][0], nome: _rows[i][1]);
 
             // incluir o Centro trabalho
             await _dbHelper.insertCentrotrab(_centro);
-
-
           }
-
         } else {
           var _mensage = _resp[0]['statusMessage'];
           print('Failed mensagem: ${_mensage}');
@@ -132,10 +125,85 @@ class ApiService {
     }
   }
 
+  static Future<String> openSession() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _usuario = prefs.getString('api_usuario') ?? 'iranildo';
+    _senha = prefs.getString('api_senha') ?? '123456';
 
+    String _url =
+        '${_servidor}/mge/service.sbr?serviceName=MobileLoginSP.login';
 
+    String xmlBody = '''<?xml version="1.0" encoding="UTF-8"?>
+                          <serviceRequest serviceName="MobileLoginSP.login">
+                            <requestBody>
+                              <NOMUSU>${_usuario}</NOMUSU>
+                              <INTERNO>${_senha}</INTERNO>
+                            </requestBody>
+                          </serviceRequest>''';
 
+    try {
+      final response = await http.post(
+        Uri.parse(_url),
+        headers: {
+          'Content-Type': 'application/xml',
+        },
+        body: utf8.encode(xmlBody),
+      );
 
+      if (response.statusCode == 200) {
+        final document = xml.XmlDocument.parse(response.body);
+        final serviceResponse =
+            document.findAllElements('serviceResponse').first;
+        final status = serviceResponse.getAttribute('status');
+        if (status == "1") {
+          jsessionid =
+              'JSESSIONID=${document.findAllElements('jsessionid').first.text}';
+        } else {
+          print('Usuário ou senha invalido!!!');
+        }
+      } else {
+        print('Failed to login: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error occurred: $e');
+    }
+    return jsessionid;
+  }
+
+  static Future<void> closeSession() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _usuario = prefs.getString('api_usuario') ?? 'iranildo';
+    _senha = prefs.getString('api_senha') ?? '123456';
+
+    String _url =
+        '${_servidor}/mge/service.sbr?serviceName=MobileLoginSP.logout&outputType=json';
+
+    String Body = '''
+                     {
+                       "serviceName":"MobileLoginSP.logout",
+                       "status": "1",
+                       "pendingPrinting":"false"  
+                     }    
+                  ''';
+
+    try {
+      final response = await http.post(
+        Uri.parse(_url),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: utf8.encode(Body),
+      );
+
+      if (response.statusCode == 200) {
+        print('Conn. Close...');
+      } else {
+        print('Failed to login: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error occurred: $e');
+    }
+  }
 }
-
-

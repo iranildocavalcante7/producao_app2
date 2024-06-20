@@ -6,10 +6,7 @@ import 'package:producao_app/services/database_helper.dart';
 import 'package:producao_app/models/centrotrab.dart';
 import 'package:producao_app/services/api_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-
-
-
-
+import 'package:producao_app/screens/SelectOrdens.dart';
 
 class CentroTrabScreen extends StatefulWidget {
   var operador;
@@ -20,12 +17,9 @@ class CentroTrabScreen extends StatefulWidget {
 }
 
 class _CentroTrabScreenState extends State<CentroTrabScreen> {
-  //var operador;
-  //var nome;
-  //Centrotrab(this.operador, this.nome);
   final DatabaseHelper _dbHelper = DatabaseHelper();
   List<Centrotrab> _centrotrabs = [];
-  String _appVersion  ="";
+  String _appVersion = "";
 
   int _counter = 0;
   Timer? _timer;
@@ -45,7 +39,6 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
     });
   }
 
-  
   void _startTimer() {
     _timer = Timer.periodic(Duration(seconds: 5), (timer) {
       setState(() {
@@ -54,7 +47,6 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
       });
     });
   }
-  
 
   @override
   void dispose() {
@@ -62,14 +54,12 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
     super.dispose();
   }
 
-
   Future<void> _refreshCentrotrabs() async {
     final data = await _dbHelper.getCentrotrabs();
     setState(() {
       _centrotrabs = data;
     });
   }
-
 
   Future<void> _startDataSync(int vSec) async {
     // Exibir o diálogo de progresso
@@ -98,7 +88,7 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
 
     // Fechar o diálogo de progresso
     Navigator.of(context).pop();
-    
+
     // Exibir um diálogo de confirmação ou mensagem de sucesso/erro
     showDialog(
       context: context,
@@ -119,9 +109,7 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
     );
 
     _refreshCentrotrabs();
-
   }
-
 
   /*************************** 
    * Tela com a AppBar 
@@ -130,87 +118,85 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: Padding(
-            padding: EdgeInsets.all(100),
-            child: Image.asset(
-              "assets/logoalynebranco.png",
-              height: 50,
-            ),
-            
+        automaticallyImplyLeading: false,
+        title: Padding(
+          padding: EdgeInsets.all(100),
+          child: Image.asset(
+            "assets/logoalynebranco.png",
+            height: 50,
           ),
-          backgroundColor: Color(0xFF2A53A1),
-          centerTitle: true,
-          elevation: 15,
-          actions: [
-            Container(
-              padding: EdgeInsets.only(left: 100, right: 100),
-              decoration: BoxDecoration(color: Colors.white),
-              child: Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Bem vindo(a) ${widget.nome}",
-                        style: TextStyle(
-                            color: Color(0xFF2A53A1),
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(
-                        width: 50,
-                      ),
-                      Text(
-                        "Version: $_appVersion",
-                        style: TextStyle(
-                            color: Color(0xFF2A53A1),
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(
-                        width: 20,
-                      ),
-                      GestureDetector(
-                        child: Icon(
-                          Icons.exit_to_app,
-                          color: Colors.black,
-                        ),
-                        onTap: () {
-                          var route = MaterialPageRoute(
-                                  builder:(BuildContext context) => LoginScreen());
-                                Navigator.of(context).pushReplacement(route);
-                        },
-                      ),
-                      SizedBox(
-                        width: 50,
-                      ),
-                      Text(
-                        "Sync Dados: ",
-                        style: TextStyle(
-                            color: Color(0xFF2A53A1),
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      GestureDetector(
-                        child: Icon(
-                          Icons.sync,
-                          color: Colors.blue,
-                        ),
-                        onTap: () {
-                          ApiService.SyncDados();
-                          _startDataSync(3);
-                          setState(() {
-                            _refreshCentrotrabs();  
-                          });
-                          
-                        },
-                      )
-                    ],
-                  )),
-            )
-          ],
         ),
+        backgroundColor: Color(0xFF2A53A1),
+        centerTitle: true,
+        elevation: 15,
+        actions: [
+          Container(
+            padding: EdgeInsets.only(left: 100, right: 100),
+            decoration: BoxDecoration(color: Colors.white),
+            child: Center(
+                child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  "Bem vindo(a) ${widget.nome}",
+                  style: TextStyle(
+                      color: Color(0xFF2A53A1),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                ),
+                SizedBox(
+                  width: 50,
+                ),
+                Text(
+                  "Version: $_appVersion",
+                  style: TextStyle(
+                      color: Color(0xFF2A53A1),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                ),
+                SizedBox(
+                  width: 20,
+                ),
+                GestureDetector(
+                  child: Icon(
+                    Icons.exit_to_app,
+                    color: Colors.black,
+                  ),
+                  onTap: () {
+                    var route = MaterialPageRoute(
+                        builder: (BuildContext context) => LoginScreen());
+                    Navigator.of(context).pushReplacement(route);
+                  },
+                ),
+                SizedBox(
+                  width: 50,
+                ),
+                Text(
+                  "Sync Dados: ",
+                  style: TextStyle(
+                      color: Color(0xFF2A53A1),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                ),
+                GestureDetector(
+                  child: Icon(
+                    Icons.sync,
+                    color: Colors.blue,
+                  ),
+                  onTap: () {
+                    ApiService.SyncDados();
+                    _startDataSync(3);
+                    setState(() {
+                      _refreshCentrotrabs();
+                    });
+                  },
+                )
+              ],
+            )),
+          )
+        ],
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -234,27 +220,21 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
       itemCount: _centrotrabs.length,
       itemBuilder: (context, index) {
         final centrotrab = _centrotrabs[index];
-        return 
-
-        GestureDetector(
-             onTap: (){
-                      /*
-                      var route = MaterialPageRoute(
-                         builder:
-                          (BuildContext context) =>
-                              SelectOrdens();
-                             );
-                       Navigator.of(context).push(route);
-              */
-                      },
-
-        child: Container(
-          height: 50,
-
+        return GestureDetector(
+          onTap: () {
+            var route = MaterialPageRoute(
+                builder: (BuildContext context) => SelectOrdens(widget.operador,
+                    centrotrab.nome, centrotrab.id, widget.nome));
+            Navigator.of(context).push(route);
+          },
+          child: Container(
+            height: 50,
             child: Card(
               elevation: 10,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15),),  
-                child: ClipPath(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: ClipPath(
                 child: Container(
                   padding: const EdgeInsets.all(5),
                   child: Column(
@@ -267,85 +247,76 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
                         margin: EdgeInsets.all(8),
                         alignment: Alignment.topCenter,
                         decoration: BoxDecoration(
-                            borderRadius:
-                            BorderRadius.circular(5),
-                            color: centrotrab.id == 39 ? Colors.green : Colors.red,
-                            ),
+                          borderRadius: BorderRadius.circular(5),
+                          color:
+                              centrotrab.id == 39 ? Colors.green : Colors.red,
+                        ),
                         child: Center(
-                            child: Text(
-                              "Centro de Trabalho",
+                          child: Text(
+                            "Centro de Trabalho",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                            ),
-                        ),  
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ),
 
                       //****************************/
-                      // Primeiro texto com o nome Centro de Trabalho  
+                      // Primeiro texto com o nome Centro de Trabalho
                       //****************************/
                       Text(
                         centrotrab.nome,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontWeight: FontWeight.bold,fontSize: 18),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Text('ID: ${centrotrab.id}'),
 
                       //****************************/
-                      // Segundo texto com o nome Centro de Trabalho  
+                      // Segundo texto com o nome Centro de Trabalho
                       //****************************/
-                      SizedBox(height: 20),                  
+                      SizedBox(height: 10),
                       Container(
                         padding: EdgeInsets.all(5),
                         margin: EdgeInsets.only(left: 10, right: 10),
                         alignment: Alignment.center,
                         child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                        Text(
-                          "TEMPERATURA",
-                          style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
-                                ),
-                                Text(
-                                  '${'ºC'}',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "TEMPERATURA",
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
+                            Text(
+                              '${'ºC'}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white),
-                                  ),
-                                  ],
                             ),
-                          decoration: BoxDecoration(
-                            borderRadius:
-                            BorderRadius.circular(5),
-                            color: centrotrab.id == 39 ? Colors.green : Colors.red,
-                            ),
+                          ],
                         ),
-
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(5),
+                          color:
+                              centrotrab.id == 39 ? Colors.green : Colors.red,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-
-        ),
-
-      );
-        
-
+          ),
+        );
       },
     );
   }
-}
-
-class SelectOrdens {
-
-
 }

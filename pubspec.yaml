@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.2
   flutter_launcher_icons: ^0.10.0
   http: ^1.1.0
-  xml: ^5.3.1
+  xml: ^5.4.1
   sqflite: ^2.0.0+3
   path: ^1.8.0
   dio: ^5.3.2
@@ -46,6 +46,9 @@ dependencies:
   dio_cookie_manager: ^3.1.1
   shared_preferences: ^2.0.6
   package_info_plus: ^4.2.0
+  qr_code_scanner: ^1.0.1
+  intl: ^0.18.0
+  convert: ^3.0.1
 
 dev_dependencies:
   flutter_test:
