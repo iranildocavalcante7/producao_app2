@@ -5,7 +5,6 @@ import '../models/usuario.dart';
 import '../models/confconn.dart';
 import '../models/centrotrab.dart';
 
-
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
@@ -56,10 +55,10 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE centrotrab(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT
+        nome TEXT,
+        qtdop INTEGER
       )
     ''');
-    
   }
 
   Future<int> insertConfconn(Confconn confconn) async {
@@ -69,7 +68,8 @@ class DatabaseHelper {
 
   Future<int> updateConfconn(Confconn confconn) async {
     final db = await database;
-    return await db.update('confconn', confconn.toMap(), where: 'id = ?', whereArgs: [confconn.id]);
+    return await db.update('confconn', confconn.toMap(),
+        where: 'id = ?', whereArgs: [confconn.id]);
   }
 
   Future<int> deleteConfconn(int id) async {
@@ -94,9 +94,6 @@ class DatabaseHelper {
     return null;
   }
 
-
-
-
   Future<int> insertUsuario(Usuario usuario) async {
     final db = await database;
     return await db.insert('usuarios', usuario.toMap());
@@ -104,7 +101,8 @@ class DatabaseHelper {
 
   Future<int> updateUsuario(Usuario usuario) async {
     final db = await database;
-    return await db.update('usuarios', usuario.toMap(), where: 'id = ?', whereArgs: [usuario.id]);
+    return await db.update('usuarios', usuario.toMap(),
+        where: 'id = ?', whereArgs: [usuario.id]);
   }
 
   Future<int> deleteUsuario(int id) async {
@@ -112,15 +110,10 @@ class DatabaseHelper {
     return await db.delete('usuarios', where: 'id = ?', whereArgs: [id]);
   }
 
-  
-
   Future<int> deleteUsuarioAll() async {
     final db = await database;
     return await db.delete('usuarios', where: 'id != 0');
   }
-
-  
-
 
   Future<List<Usuario>> getUsuarios() async {
     final db = await database;
@@ -130,8 +123,7 @@ class DatabaseHelper {
     });
   }
 
-
- // Nova função para encontrar um Usuario pelo ID
+  // Nova função para encontrar um Usuario pelo ID
   Future<Usuario?> findUsuarioById(int id) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -147,7 +139,6 @@ class DatabaseHelper {
     }
   }
 
-
   Future<int> insertCentrotrab(Centrotrab centrotrab) async {
     final db = await database;
     return await db.insert('centrotrab', centrotrab.toMap());
@@ -155,7 +146,8 @@ class DatabaseHelper {
 
   Future<int> updateCentrotrab(Centrotrab centrotrab) async {
     final db = await database;
-    return await db.update('centrotrab', centrotrab.toMap(), where: 'id = ?', whereArgs: [centrotrab.id]);
+    return await db.update('centrotrab', centrotrab.toMap(),
+        where: 'id = ?', whereArgs: [centrotrab.id]);
   }
 
   Future<int> deleteCentrotrab(int id) async {
@@ -167,7 +159,6 @@ class DatabaseHelper {
     final db = await database;
     return await db.delete('centrotrab', where: 'id != 0');
   }
-
 
   Future<List<Centrotrab>> getCentrotrab() async {
     final db = await database;
@@ -184,12 +175,8 @@ class DatabaseHelper {
       return Centrotrab(
         id: maps[i]['id'],
         nome: maps[i]['nome'],
+        qtdop: maps[i]['qtdop'],
       );
     });
   }
-
- 
-
-
-
 }

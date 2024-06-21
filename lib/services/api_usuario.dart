@@ -12,9 +12,9 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:cookie_store/cookie_store.dart';
 import 'package:producao_app/services/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
 
 class ApiUsuario {
-
   static String jsessionid = '';
   static String _servidor = '';
   static String _usuario = '';
@@ -23,25 +23,15 @@ class ApiUsuario {
   static String cookieHe = '';
 
   static Future<void> SyncDados() async {
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-    _usuario  = prefs.getString('api_usuario') ?? 'iranildo';
-    _senha    = prefs.getString('api_senha') ?? '123456';
+    _usuario = prefs.getString('api_usuario') ?? 'iranildo';
+    _senha = prefs.getString('api_senha') ?? '123456';
 
-  /*
-    final dbService = DatabaseHelper();
-    final confconn  = await dbService.getConfconn();
+    String _url =
+        '${_servidor}/mge/service.sbr?serviceName=MobileLoginSP.login';
 
-    var _url = '';
-    if (confconn == null) {} else{
-      endereco = confconn[0].endereco;
-      _url = '${endereco}/mge/service.sbr?serviceName=MobileLoginSP.login';
-    }
-    */
-    String _url = '${_servidor}/mge/service.sbr?serviceName=MobileLoginSP.login';
-
-    String xmlBody  = '''<?xml version="1.0" encoding="UTF-8"?>
+    String xmlBody = '''<?xml version="1.0" encoding="UTF-8"?>
                           <serviceRequest serviceName="MobileLoginSP.login">
                             <requestBody>
                               <NOMUSU>${_usuario}</NOMUSU>
@@ -58,14 +48,15 @@ class ApiUsuario {
         body: utf8.encode(xmlBody),
       );
 
-
       if (response.statusCode == 200) {
         final document = xml.XmlDocument.parse(response.body);
-        final serviceResponse = document.findAllElements('serviceResponse').first;
+        final serviceResponse =
+            document.findAllElements('serviceResponse').first;
         final status = serviceResponse.getAttribute('status');
         if (status == "1") {
-          jsessionid = 'JSESSIONID=${document.findAllElements('jsessionid').first.text}';
-          ParceiroSync();
+          jsessionid =
+              'JSESSIONID=${document.findAllElements('jsessionid').first.text}';
+          UsuarioSync();
         } else {
           print('Usuário ou senha invalido!!!');
         }
@@ -77,32 +68,16 @@ class ApiUsuario {
     }
   }
 
-  static Future<void> ParceiroSync() async {
+  static Future<void> UsuarioSync() async {
     final DatabaseHelper _dbHelper = DatabaseHelper();
 
-    var _url = '';
-    _url = '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
+    String vsql = '''
+              SELECT CODUSU,NOMEUSU FROM TSIUSU WHERE CODUSU <> 0 AND ISNULL(DTLIMACESSO,'') = ''
+            ''';
 
-    const String Body = '''
-                        {"serviceName":"DbExplorerSP.executeQuery",
-                            "requestBody": {
-                            "sql": "SELECT CODUSU,NOMEUSU FROM TSIUSU WHERE CODUSU <> 0 AND ISNULL(DTLIMACESSO,'') = '' "
-                            }
-                          }    
-                        ''';
+    var response = await ApiService.DbExplorer(vsql);
 
     try {
-      final headers = {
-        'Content-Type': 'application/json',
-        'Cookie':jsessionid
-      };
-
-      final response = await http.post(
-        Uri.parse(_url),
-        headers: headers,
-        body: utf8.encode(Body),
-      );
-
       if (response.statusCode == 200) {
         var _resp = json.decode(response.body);
         final _status = _resp['status'];
@@ -112,15 +87,12 @@ class ApiUsuario {
 
           // limpa todos os Parceiros
           await _dbHelper.deleteUsuarioAll();
-          for (var i=0; i < _rows.length; i++) {
-            print('Usuário: ${_rows[i][1]}');        
-            final _centro = Usuario(id: _rows[i][0]
-                                    , nome: _rows[i][1]
-                                    );
+          for (var i = 0; i < _rows.length; i++) {
+            print('Usuário: ${_rows[i][1]}');
+            final _centro = Usuario(id: _rows[i][0], nome: _rows[i][1]);
             // incluir o Centro trabalho
             await _dbHelper.insertUsuario(_centro);
           }
-          
         } else {
           var _mensage = _resp[0]['statusMessage'];
           print('Failed mensagem: ${_mensage}');
@@ -132,11 +104,4 @@ class ApiUsuario {
       print('Error occurred: $e');
     }
   }
-
-
-
-
-
 }
-
-

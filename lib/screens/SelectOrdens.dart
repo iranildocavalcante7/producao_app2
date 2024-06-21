@@ -61,8 +61,11 @@ class SelectOrdens extends StatefulWidget {
   var centro;
   var cod_centro;
   var nome;
-  SelectOrdens(this.operador, this.centro, this.cod_centro, this.nome,
-      {super.key});
+  final String ip;
+
+  SelectOrdens(this.operador, this.centro, this.cod_centro, this.nome, this.ip,
+      {Key? key})
+      : super(key: key);
 
   @override
   _SelectOrdensState createState() => _SelectOrdensState();
@@ -73,95 +76,50 @@ class _SelectOrdensState extends State<SelectOrdens> {
   List<OrdemProducao> ordensProducaoCentro = [];
 
   Future<void> fetchOrdensProducaoCentro() async {
-    String _servidor = '';
-    String jsessionid = await ApiService.openSession();
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-
-    var _url =
-        '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
-
-    String Body = '''
-                 {"serviceName":"DbExplorerSP.executeQuery",
-                     "requestBody": {
-                     "sql": "SELECT * FROM sankhya.AD_VAPP_OPS_SMART WHERE codCentro = ${widget.cod_centro} "
-                       }
-                  }    
-                  ''';
-
-    final headers = {'Content-Type': 'application/json', 'Cookie': jsessionid};
-
-    final response = await http.post(
-      Uri.parse(_url),
-      headers: headers,
-      body: utf8.encode(Body),
-    );
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> json = jsonDecode(response.body);
-      List<dynamic> rows = json['responseBody']['rows'];
-      List<OrdemProducao> ordens = [];
-      for (var row in rows) {
+    /*
+      Procura dentro da lista de Ordens de Produção a OP 
+      que tem o centro de resultado selecionado "widget.cod_centro"
+    */
+    List<OrdemProducao> ordens = [];
+    for (var i = 0; i < ordensProducao.length; i++) {
+      if (ordensProducao[i].codCentro == widget.cod_centro) {
         ordens.add(OrdemProducao(
-            codOrdem: row[0],
-            codProduto: row[1],
-            descProduto: row[2],
-            codCentro: row[3],
-            descCentro: row[4],
-            processo: row[5],
-            lote: row[6],
-            localOrigem: row[7],
-            localDestino: row[8],
-            dhInicio: row[9],
-            dhFinal: row[10],
-            dataSeq: row[11],
-            qtdAProduz: row[12].toDouble(),
-            qtdProduz: row[13].toDouble(),
-            statusOP: row[14],
-            CODMTP: row[15],
-            MOTPARADA: row[16],
-            IDIATV: row[17],
-            IDPROC: row[18],
-            IDEFX: row[19]));
+            codOrdem: ordensProducao[i].codOrdem,
+            codProduto: ordensProducao[i].codProduto,
+            descProduto: ordensProducao[i].descProduto,
+            codCentro: ordensProducao[i].codOrdem,
+            descCentro: ordensProducao[i].descCentro,
+            processo: ordensProducao[i].processo,
+            lote: ordensProducao[i].lote,
+            localOrigem: ordensProducao[i].localOrigem,
+            localDestino: ordensProducao[i].localDestino,
+            dhInicio: ordensProducao[i].dhInicio,
+            dhFinal: ordensProducao[i].dhFinal,
+            dataSeq: ordensProducao[i].dataSeq,
+            qtdAProduz: ordensProducao[i].qtdAProduz,
+            qtdProduz: ordensProducao[i].qtdProduz,
+            statusOP: ordensProducao[i].statusOP,
+            CODMTP: ordensProducao[i].CODMTP,
+            MOTPARADA: ordensProducao[i].MOTPARADA,
+            IDIATV: ordensProducao[i].IDIATV,
+            IDPROC: ordensProducao[i].IDPROC,
+            IDEFX: ordensProducao[i].IDEFX));
       }
-
-      setState(() {
-        ordensProducaoCentro = ordens;
-      });
-    } else {
-      throw Exception('Failed to load data');
     }
-
-    await ApiService.closeSession();
+    setState(() {
+      ordensProducaoCentro = ordens;
+    });
   }
 
   Future<void> fetchOrdensProducao() async {
-    String _servidor = '';
-    String jsessionid = await ApiService.openSession();
+    String vsql = '''
+              SELECT codOrdem,codProduto,descProduto,codCentro,descCentro,processo,lote
+                , localOrigem , localDestino,dhInicio,dhFinal,dataSeq,qtd_AProduz,qtd_Produz,
+                statusOP,CODMTP,MOTPARADA,IDIATV,IDPROC,IDEFX 
+                FROM sankhya.AD_VAPP_OPS_SMART
+            ''';
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-
-    var _url =
-        '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
-
-    String Body = '''
-                 {"serviceName":"DbExplorerSP.executeQuery",
-                     "requestBody": {
-                     "sql": "SELECT * FROM sankhya.AD_VAPP_OPS_SMART "
-                       }
-                  }    
-                  ''';
-
-    final headers = {'Content-Type': 'application/json', 'Cookie': jsessionid};
-
-    final response = await http.post(
-      Uri.parse(_url),
-      headers: headers,
-      body: utf8.encode(Body),
-    );
-
+    var response = await ApiService.DbExplorer(vsql);
     if (response.statusCode == 200) {
       final Map<String, dynamic> json = jsonDecode(response.body);
       List<dynamic> rows = json['responseBody']['rows'];
@@ -193,6 +151,8 @@ class _SelectOrdensState extends State<SelectOrdens> {
       setState(() {
         ordensProducao = ordens;
       });
+
+      fetchOrdensProducaoCentro();
     } else {
       throw Exception('Failed to load data');
     }
@@ -237,7 +197,7 @@ class _SelectOrdensState extends State<SelectOrdens> {
           Navigator.of(context).pop();
           var route = MaterialPageRoute(
               builder: (BuildContext context) => SelectOrdens(widget.operador,
-                  widget.centro, widget.cod_centro, widget.nome));
+                  widget.centro, widget.cod_centro, widget.nome, widget.ip));
           Navigator.of(context).push(route);
         } else {
           final statusMessage = document.findAllElements('statusMessage').first;
@@ -339,7 +299,6 @@ class _SelectOrdensState extends State<SelectOrdens> {
   void initState() {
     super.initState();
     //FlutterRingtonePlayer.stop();
-    fetchOrdensProducaoCentro();
     fetchOrdensProducao();
   }
 
@@ -547,7 +506,8 @@ class _SelectOrdensState extends State<SelectOrdens> {
                                                 ordem.codOrdem,
                                                 widget.operador,
                                                 widget.cod_centro,
-                                                widget.nome));
+                                                widget.nome,
+                                                widget.ip));
                                     Navigator.of(context).push(route);
                                   },
                                 );

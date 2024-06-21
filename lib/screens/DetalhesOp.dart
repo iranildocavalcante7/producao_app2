@@ -1,37 +1,40 @@
 import 'package:flutter/material.dart';
 //import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
-import 'dart:async';
 import 'package:http/http.dart' as http;
-import 'Fim.dart';
 import 'dart:convert';
-import 'FluxoAlyne.dart';
-import 'centrotrab_screen.dart';
+import 'package:producao_app/screens/Fim.dart';
+import 'package:producao_app/screens/FluxoAlyne.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'package:xml/xml.dart' as xml;
 import 'package:convert/convert.dart';
 
 class DetalhesOp extends StatefulWidget {
-  late var id_ordem;
-  late var operador;
-  late var cod_centro;
-  late var nome;
-  DetalhesOp(this.id_ordem, this.operador, this.cod_centro, this.nome);
+  var id_ordem;
+  var operador;
+  var cod_centro;
+  var nome;
+  var ip;
+  DetalhesOp(this.id_ordem, this.operador, this.cod_centro, this.nome, this.ip);
 
   @override
   _DetalhesOpState createState() => _DetalhesOpState();
 }
 
 class _DetalhesOpState extends State<DetalhesOp> {
-  List<dynamic> _ordem = [];
-  String _cod_ordem = '';
-  String _cod_produto = '';
-  String _desc_produto = '';
-  String _local_origem = '';
-  String _local_destino = '';
-  String _data_emissao = '';
-  String _data_inclusao = '';
-  //String _hora_inclusao = '';
+  List<dynamic> _paradas = [];
+  int _etapaParada = 1;
+
+  Future<void> fetchDataParadas() async {
+    String apiFunc = 'http://${widget.ip}/api/GetParadas.php';
+    var data = {'codigo': widget.id_ordem};
+    http.Response response =
+        await http.post(Uri.parse(apiFunc), body: json.encode(data));
+    setState(() {
+      _paradas = json.decode(response.body);
+      _etapaParada = _paradas[0]["etapa"];
+    });
+  }
 
   String _codOrdem = '';
   String _codProduto = '';
@@ -53,49 +56,18 @@ class _DetalhesOpState extends State<DetalhesOp> {
   String _IDEFX = '';
   List<dynamic> rowsData = [];
 
-  //List<dynamic> _paradas = [];
-  int _etapaParada = 1;
-/*
-  Future<dynamic> fetchDataParadas() async {
-    String apiFunc = 'http://10.0.1.135/api/GetParadas.php';
-    var data = {'codigo': '${widget.id_ordem}'};
-    http.Response response =
-        await http.post(Uri.parse(apiFunc), body: json.encode(data));
-    setState(() {
-      _paradas = json.decode(response.body);
-      _etapaParada = _paradas[0]["etapa"];
-    });
-  }
-*/
-
   Future<void> fetchData2() async {
-    String _servidor = '';
-    String jsessionid = await ApiService.openSession();
+    String vsql = '''
+              SELECT codOrdem, codProduto, descProduto, codCentro, descCentro
+                , processo, lote, localOrigem, localDestino, DHINICIO, DHFINAL
+                , DATASEQ, QTD_APRODUZ, QTD_PRODUZ, STATUSOP, IDIATV, IDPROC, IDEFX 
+              FROM sankhya.AD_VAPP_OPS_SMART 
+              WHERE codOrdem = ${widget.id_ordem}
+            ''';
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-
-    var _url =
-        '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
-
-    String Body = '''
-                 {"serviceName":"DbExplorerSP.executeQuery",
-                     "requestBody": {
-                     "sql": "SELECT codOrdem, codProduto, descProduto, codCentro, descCentro, processo, lote, localOrigem, localDestino, DHINICIO, DHFINAL, DATASEQ, QTD_APRODUZ, QTD_PRODUZ, STATUSOP, IDIATV, IDPROC, IDEFX FROM sankhya.AD_VAPP_OPS_SMART WHERE codOrdem = ${widget.id_ordem} "
-                       }
-                  }    
-                  ''';
-
-    final headers = {'Content-Type': 'application/json', 'Cookie': jsessionid};
-
-    final response = await http.post(
-      Uri.parse(_url),
-      headers: headers,
-      body: utf8.encode(Body),
-    );
+    var response = await ApiService.DbExplorer(vsql);
 
     if (response.statusCode == 200) {
-      ;
       final data = json.decode(response.body);
       final rows = data['responseBody']['rows'];
       setState(() {
@@ -122,38 +94,22 @@ class _DetalhesOpState extends State<DetalhesOp> {
     } else {
       throw Exception('Falha ao carregar os dados da API');
     }
-
     await ApiService.closeSession();
   }
 
   Future<void> fetchDataFluxo() async {
     //final response = await http
-    //  .get(Uri.parse('http://10.0.1.135:5000/fluxo?codprod=${_codProduto}'));
+    // .get(Uri.parse('http://${widget.ip}:5000/fluxo?codprod=$_codProduto'));
 
-    String _servidor = '';
-    String jsessionid = await ApiService.openSession();
+    String vsql = '''
+            SELECT PRO.CODPROD as codProduto, pre.descpre as etapa, PRE.SEQPRE as prioridade
+              , pre.TEMPO as tempoAgitacao 
+            FROM AD_MODPRE PRE 
+            LEFT JOIN TGFPRO PRO ON PRO.CODPROD = PRE.CODPROD 
+            WHERE PRO.CODPROD = ${_codProduto}            
+            ''';
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-
-    var _url =
-        '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
-
-    String Body = '''
-                 {"serviceName":"DbExplorerSP.executeQuery",
-                     "requestBody": {
-                     "sql": "SELECT PRO.CODPROD as codProduto, pre.descpre as etapa, PRE.SEQPRE as prioridade, pre.TEMPO as tempoAgitacao FROM AD_MODPRE PRE LEFT JOIN TGFPRO PRO ON PRO.CODPROD = PRE.CODPROD WHERE PRO.CODPROD = ${_codProduto} "
-                       }
-                  }    
-                  ''';
-
-    final headers = {'Content-Type': 'application/json', 'Cookie': jsessionid};
-
-    final response = await http.post(
-      Uri.parse(_url),
-      headers: headers,
-      body: utf8.encode(Body),
-    );
+    var response = await ApiService.DbExplorer(vsql);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -184,32 +140,17 @@ class _DetalhesOpState extends State<DetalhesOp> {
 
   Future<void> fetchDataFluxoReiniciar() async {
     //final response = await http
-    //  .get(Uri.parse('http://10.0.1.135:5000/fluxo?codprod=${_codProduto}'));
+    //  .get(Uri.parse('http://${widget.ip}:5000/fluxo?codprod=$_codProduto'));
 
-    String _servidor = '';
-    String jsessionid = await ApiService.openSession();
+    String vsql = '''
+            SELECT PRO.CODPROD as codProduto, pre.descpre as etapa
+                , PRE.SEQPRE as prioridade, pre.TEMPO as tempoAgitacao 
+            FROM AD_MODPRE PRE  
+            LEFT JOIN TGFPRO PRO ON PRO.CODPROD = PRE.CODPROD 
+            WHERE PRO.CODPROD = ${_codProduto}
+            ''';
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-
-    var _url =
-        '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
-
-    String Body = '''
-                 {"serviceName":"DbExplorerSP.executeQuery",
-                     "requestBody": {
-                     "sql": "SELECT PRO.CODPROD as codProduto, pre.descpre as etapa, PRE.SEQPRE as prioridade, pre.TEMPO as tempoAgitacao FROM AD_MODPRE PRE  LEFT JOIN TGFPRO PRO ON PRO.CODPROD = PRE.CODPROD WHERE PRO.CODPROD = ${_codProduto}"
-                       }
-                  }    
-                  ''';
-
-    final headers = {'Content-Type': 'application/json', 'Cookie': jsessionid};
-
-    final response = await http.post(
-      Uri.parse(_url),
-      headers: headers,
-      body: utf8.encode(Body),
-    );
+    var response = await ApiService.DbExplorer(vsql);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -238,75 +179,9 @@ class _DetalhesOpState extends State<DetalhesOp> {
     await ApiService.closeSession();
   }
 
-  List<dynamic> retornoERP = [];
-  String statusERP = '';
-  String statusMessageERP = '';
-
-  Future<void> _iniciarOPERP() async {
-    //final response = await http.get(
-    //  Uri.parse('http://10.0.1.135:5000/post_iniciarop?idiatv=${_IDIATV}'));
-
-    String _servidor = '';
-    String jsessionid = await ApiService.openSession();
-    jsessionid = jsessionid.split('=')[1];
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-
-    var _url =
-        '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.iniciarInstanciaAtividades&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
-
-    String Body = '''
-                  <serviceRequest serviceName="OperacaoProducaoSP.iniciarInstanciaAtividades">
-                          <requestBody>
-                              <instancias>
-                                  <instancia>
-                                      <IDIATV>${_IDIATV}</IDIATV>
-                                  </instancia>
-                              </instancias>
-                          </requestBody>
-                      </serviceRequest>
-                  ''';
-
-    final headers = {'Content-Type': 'application/xml', 'Cookie': jsessionid};
-
-    final response = await http.post(
-      Uri.parse(_url),
-      headers: headers,
-      body: utf8.encode(Body),
-    );
-
-    if (response.statusCode == 200) {
-      final document = xml.XmlDocument.parse(response.body);
-      final serviceResponse = document.findAllElements('serviceResponse').first;
-      final status = serviceResponse.getAttribute('status');
-      if (status == "1") {
-        final data = json.decode(response.body);
-        setState(() {
-          retornoERP = data;
-          statusERP = retornoERP[0][0].toString();
-          statusMessageERP = retornoERP[0][1].toString();
-        });
-      } else {
-        final statusMessage = document.findAllElements('statusMessage').first;
-        final cdataContent = statusMessage.text.trim();
-        // limpa a string para BASE64
-        final cleanedContent =
-            cdataContent.replaceAll('\n', '').replaceAll(' ', '');
-        // Decodifique a string BASE64
-        final decodedBytes = base64Decode(cleanedContent);
-        final decodedString = String.fromCharCodes(decodedBytes);
-      }
-    } else {
-      throw Exception('Falha ao carregar os dados da API');
-    }
-
-    await ApiService.closeSession();
-  }
-
   Future<void> iniciarOP() async {
     //final String url =
-    //  'http://10.0.1.135:5000/post_iniciarop?idiatv=${_IDIATV}';
+    //'http://${widget.ip}:5000/post_iniciarop?idiatv=$_IDIATV';
 
     String _servidor = '';
     String jsessionid = await ApiService.openSession();
@@ -339,14 +214,11 @@ class _DetalhesOpState extends State<DetalhesOp> {
     );
 
     try {
-      //final response = await http.get(Uri.parse(url));
-
       if (response.statusCode == 200) {
         final document = xml.XmlDocument.parse(response.body);
         final serviceResponse =
             document.findAllElements('serviceResponse').first;
         final status = serviceResponse.getAttribute('status');
-
         if (status == '1') {
           sendData();
         } else {
@@ -359,57 +231,22 @@ class _DetalhesOpState extends State<DetalhesOp> {
           final decodedBytes = base64Decode(cleanedContent);
           final decodedString = String.fromCharCodes(decodedBytes);
 
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                elevation: 0.0,
-                backgroundColor: Colors.transparent,
-                child: Container(
-                  padding: EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16.0),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Resposta Sankhya (Iniciar Atividade)',
-                        style: TextStyle(
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 12.0),
-                      Text('Status: $status'),
-                      Text('Mensagem: $decodedString'),
-                      SizedBox(height: 12.0),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Text('Fechar'),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
+          _showDialog(context, 'Resposta Sankhya (Iniciar Atividade)',
+              'Status: $status\nMensagem: $decodedString');
         }
-      } else {}
-    } catch (e) {}
+      } else {
+        throw Exception('Failed to initiate OP');
+      }
+    } catch (e) {
+      throw Exception('Failed to initiate OP');
+    }
 
     await ApiService.closeSession();
   }
 
   Future<void> reiniciarOP() async {
     //final String url =
-    //'http://10.0.1.135:5000/post_continuar_op?idiatv=${_IDIATV}';
+    //'http://${widget.ip}:5000/post_continuar_op?idiatv=$_IDIATV';
 
     String _servidor = '';
     String jsessionid = await ApiService.openSession();
@@ -422,7 +259,7 @@ class _DetalhesOpState extends State<DetalhesOp> {
         '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.continuarInstanciaAtividades&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
 
     String Body = '''
-                  <serviceRequest serviceName="OperacaoProducaoSP.continuarInstanciaAtividades">
+                  <serviceRequest serviceName="OperacaoProducaoSP.iniciarInstanciaAtividades">
                           <requestBody>
                               <instancias>
                                   <instancia>
@@ -442,8 +279,6 @@ class _DetalhesOpState extends State<DetalhesOp> {
     );
 
     try {
-      //final response = await http.get(Uri.parse(url));
-
       if (response.statusCode == 200) {
         final document = xml.XmlDocument.parse(response.body);
         final serviceResponse =
@@ -462,59 +297,22 @@ class _DetalhesOpState extends State<DetalhesOp> {
           final decodedBytes = base64Decode(cleanedContent);
           final decodedString = String.fromCharCodes(decodedBytes);
 
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                elevation: 0.0,
-                backgroundColor: Colors.transparent,
-                child: Container(
-                  padding: EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16.0),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Resposta Sankhya (Reiniciar Atividade)',
-                        style: TextStyle(
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 12.0),
-                      Text('Status: $status'),
-                      Text('Mensagem: $decodedString'),
-                      SizedBox(height: 12.0),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Text('Fechar'),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
+          _showDialog(context, 'Resposta Sankhya (Reiniciar Atividade)',
+              'Status: $status\nMensagem: $decodedString');
         }
-      } else {}
-    } catch (e) {}
+      } else {
+        throw Exception('Failed to restart OP');
+      }
+    } catch (e) {
+      throw Exception('Failed to restart OP');
+    }
 
     await ApiService.closeSession();
   }
 
-  bool _isLoading = false;
-
   Future<void> liberarCentro() async {
     //final String url =
-    //'http://10.0.1.135:5000/post_liberarcentro?idiatv=${_IDIATV}';
+    //  'http://${widget.ip}:5000/post_liberarcentro?idiatv=$_IDIATV';
 
     String _servidor = '';
     String jsessionid = await ApiService.openSession();
@@ -547,7 +345,6 @@ class _DetalhesOpState extends State<DetalhesOp> {
     );
 
     try {
-      //final response = await http.get(Uri.parse(_url));
       if (response.statusCode == 200) {
         final document = xml.XmlDocument.parse(response.body);
         final serviceResponse =
@@ -569,123 +366,100 @@ class _DetalhesOpState extends State<DetalhesOp> {
           final decodedBytes = base64Decode(cleanedContent);
           final decodedString = String.fromCharCodes(decodedBytes);
 
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                elevation: 0.0,
-                backgroundColor: Colors.transparent,
-                child: Container(
-                  padding: EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16.0),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Resposta Sankhya (Finalizar Atividade)',
-                        style: TextStyle(
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 12.0),
-                      Text('Status: $status'),
-                      Text('Mensagem: $statusMessage'),
-                      SizedBox(height: 12.0),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          //sendData();
-                        },
-                        child: Text('Fechar'),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
+          _showDialog(context, 'Resposta Sankhya (Finalizar Atividade)',
+              'Status: $status\nMensagem: $decodedString');
         }
       } else {
-        setState(() {
-          _isLoading = false;
-        });
+        throw Exception('Failed to release center');
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      throw Exception('Failed to release center');
     }
 
     await ApiService.closeSession();
   }
 
-  List<dynamic> _fluxo = [];
-
-  String phpurl = "http://10.0.1.135/api/InsertMudOp.php";
-  bool error = false;
-  bool sending = false;
-  bool success = false;
-  String msg = "";
-
-/**/
+  void _showDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          elevation: 0.0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16.0),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12.0),
+                Text(content),
+                SizedBox(height: 12.0),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Fechar'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   Future<void> sendData() async {
-    var res = await http.post(Uri.parse(phpurl), body: {
-      "op": "${_codOrdem}",
-      "status": "${_STATUSOP}",
-      "tim": "${DateTime.now()}"
+    var res = await http
+        .post(Uri.parse('http://${widget.ip}/api/InsertMudOp.php'), body: {
+      "op": _codOrdem,
+      "status": _STATUSOP,
+      "tim": DateTime.now().toString()
     });
 
     if (res.statusCode == 200) {
       var data = json.decode(res.body);
       if (data["error"]) {
         final snackBar = SnackBar(
-          content: const Text("Erro ao salvar dados. Vefifique conexão!"),
+          content: const Text("Erro ao salvar dados. Verifique conexão!"),
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
-        setState(() {
-          sending = false;
-          error = true;
-          msg = data["message"];
-        });
       } else {
         final snackBar = SnackBar(
           content: const Text("Dados salvos com sucesso!"),
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
-        setState(() {
-          sending = false;
-          success = true;
-        });
         var route = MaterialPageRoute(
             builder: (BuildContext context) => FluxoAlyne(
-                "${_descProduto}",
+                _descProduto,
                 1,
-                "${widget.operador}",
-                "${_codProduto}",
-                "${_codOrdem}",
-                "${widget.cod_centro}",
-                "${widget.nome}",
-                "${_IDIATV}"));
+                widget.operador,
+                _codProduto,
+                _codOrdem,
+                widget.cod_centro,
+                widget.nome,
+                _IDIATV,
+                widget.ip));
         Navigator.of(context).push(route);
       }
     } else {
       final snackBar = SnackBar(
-        content: const Text("Erro ao salvar dados. Vefifique comexão!"),
+        content: const Text("Erro ao salvar dados. Verifique conexão!"),
       );
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
-      setState(() {
-        error = true;
-        msg = "Error during sendign data.";
-        sending = false;
-      });
     }
   }
 
@@ -693,69 +467,58 @@ class _DetalhesOpState extends State<DetalhesOp> {
     if (etapa > rowsData.length) {
       var route = MaterialPageRoute(
           builder: (BuildContext context) => FimFluxo(
-              "${_descProduto}",
-              '${rowsData.length}',
-              '${widget.operador}',
-              '${_codOrdem}',
-              '${_codProduto}',
-              '${widget.cod_centro}',
+              _descProduto,
+              rowsData.length.toString(),
+              widget.operador,
+              _codOrdem,
+              _codProduto,
+              widget.cod_centro,
               widget.nome,
-              _IDIATV));
+              _IDIATV,
+              widget.ip));
       Navigator.of(context).push(route);
       final snackBar = SnackBar(
         content: const Text("Fluxo de produção já executado"),
       );
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     } else {
-      var res = await http.post(Uri.parse(phpurl), body: {
-        "op": "${_codOrdem}",
-        "status": "${_STATUSOP}",
-        "tim": "${DateTime.now()}"
+      var res = await http
+          .post(Uri.parse('http://${widget.ip}/api/InsertMudOp.php'), body: {
+        "op": _codOrdem,
+        "status": _STATUSOP,
+        "tim": DateTime.now().toString()
       });
 
       if (res.statusCode == 200) {
         var data = json.decode(res.body);
         if (data["error"]) {
           final snackBar = SnackBar(
-            content: const Text("Erro ao salvar dados. Vefifique conexão!"),
+            content: const Text("Erro ao salvar dados. Verifique conexão!"),
           );
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
-          setState(() {
-            sending = false;
-            error = true;
-            msg = data["message"];
-          });
         } else {
           final snackBar = SnackBar(
             content: const Text("Dados salvos com sucesso!"),
           );
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
-          setState(() {
-            sending = false;
-            success = true;
-          });
           var route = MaterialPageRoute(
               builder: (BuildContext context) => FluxoAlyne(
-                  "${_descProduto}",
+                  _descProduto,
                   etapa,
-                  "${widget.operador}",
-                  "${_codProduto}",
-                  "${_codOrdem}",
-                  "${widget.cod_centro}",
-                  "${widget.nome}",
-                  "${_IDIATV}"));
+                  widget.operador,
+                  _codProduto,
+                  _codOrdem,
+                  widget.cod_centro,
+                  widget.nome,
+                  _IDIATV,
+                  widget.ip));
           Navigator.of(context).push(route);
         }
       } else {
         final snackBar = SnackBar(
-          content: const Text("Erro ao salvar dados. Vefifique comexão!"),
+          content: const Text("Erro ao salvar dados. Verifique conexão!"),
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
-        setState(() {
-          error = true;
-          msg = "Error during sendign data.";
-          sending = false;
-        });
       }
     }
   }
@@ -768,10 +531,12 @@ class _DetalhesOpState extends State<DetalhesOp> {
     super.initState();
   }
 
+  @override
   void dispose() {
     super.dispose();
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -790,17 +555,18 @@ class _DetalhesOpState extends State<DetalhesOp> {
             padding: EdgeInsets.only(left: 170, right: 170),
             decoration: BoxDecoration(color: Colors.white),
             child: Center(
-                child: Row(
-              children: [
-                Text(
-                  "DETALHES",
-                  style: TextStyle(
-                      color: Color(0xFF2A53A1),
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
-                ),
-              ],
-            )),
+              child: Row(
+                children: [
+                  Text(
+                    "DETALHES",
+                    style: TextStyle(
+                        color: Color(0xFF2A53A1),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
           )
         ],
       ),
@@ -818,7 +584,7 @@ class _DetalhesOpState extends State<DetalhesOp> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Color(0xFF2A53A1), width: 3)),
                 child: Text(
-                  "${_codProduto} | ${_descProduto}",
+                  "$_codProduto | $_descProduto",
                   style: TextStyle(
                       color: Color(0xFF2A53A1),
                       fontWeight: FontWeight.bold,
@@ -831,84 +597,9 @@ class _DetalhesOpState extends State<DetalhesOp> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "PROCESSO",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${_processo}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "LOTE",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${_lote}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "DATA | EMISSÃO",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${_DATASEQ}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
+                    _buildInfoBox("PROCESSO", _processo),
+                    _buildInfoBox("LOTE", _lote),
+                    _buildInfoBox("DATA | EMISSÃO", _DATASEQ),
                   ],
                 ),
               ),
@@ -918,84 +609,9 @@ class _DetalhesOpState extends State<DetalhesOp> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "ORDEM DE PRODUÇÃO",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${_codOrdem}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "LOCAL DE ORIGEM",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${_localOrigem}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "DATA | INCLUSÃO",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${_DHINICIO}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
+                    _buildInfoBox("ORDEM DE PRODUÇÃO", _codOrdem),
+                    _buildInfoBox("LOCAL DE ORIGEM", _localOrigem),
+                    _buildInfoBox("DATA | INCLUSÃO", _DHINICIO),
                   ],
                 ),
               ),
@@ -1005,84 +621,10 @@ class _DetalhesOpState extends State<DetalhesOp> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "OPERADOR",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${widget.operador} - ${widget.nome}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "LOCAL DE DESTINO",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${_localDestino}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.only(right: 20, left: 20),
-                      width: 300,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "HORA | INCLUSÃO",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "${_DHFINAL}",
-                            style: TextStyle(
-                                color: Color(0xFF2A53A1),
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                    ),
+                    _buildInfoBox(
+                        "OPERADOR", "${widget.operador} - ${widget.nome}"),
+                    _buildInfoBox("LOCAL DE DESTINO", _localDestino),
+                    _buildInfoBox("HORA | INCLUSÃO", _DHFINAL),
                   ],
                 ),
               ),
@@ -1090,75 +632,72 @@ class _DetalhesOpState extends State<DetalhesOp> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  GestureDetector(
-                    child: Container(
-                        height: 55,
-                        width: 280,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                          color: Colors.blue,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text(
-                              "LIBERAR CENTRO",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        )),
-                    onTap: () {
-                      setState(() {
-                        _isLoading = true;
-                      });
-                      liberarCentro();
-                    },
-                  ),
-                  GestureDetector(
-                    child: Container(
-                        height: 55,
-                        width: 280,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                          color: Color(0xFF3B9955),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text(
-                              "INICIAR PRODUÇÃO",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            Icon(
-                              Icons.check_circle_outline,
-                              color: Colors.white,
-                            )
-                          ],
-                        )),
-                    onTap: () {
-                      if (_STATUSOP == "Em Andamento") {
-                        fetchDataFluxoReiniciar();
-                      } else {
-                        fetchDataFluxo();
-                      }
-                    },
-                  ),
+                  _buildActionButton(
+                      "LIBERAR CENTRO", Colors.blue, liberarCentro),
+                  _buildActionButton("INICIAR PRODUÇÃO", Color(0xFF3B9955), () {
+                    if (_STATUSOP == "Em Andamento") {
+                      fetchDataFluxoReiniciar();
+                    } else {
+                      fetchDataFluxo();
+                    }
+                  }),
                 ],
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoBox(String label, String value) {
+    return Container(
+      padding: EdgeInsets.only(right: 20, left: 20),
+      width: 300,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.black12,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  color: Color(0xFF2A53A1), fontWeight: FontWeight.bold)),
+          Text(value,
+              style: TextStyle(
+                  color: Color(0xFF2A53A1), fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(String label, Color color, VoidCallback onPressed) {
+    return GestureDetector(
+      child: Container(
+        height: 55,
+        width: 280,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          color: color,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Text(label,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
+            if (label == "INICIAR PRODUÇÃO")
+              Icon(Icons.check_circle_outline, color: Colors.white),
+          ],
+        ),
+      ),
+      onTap: onPressed,
     );
   }
 }

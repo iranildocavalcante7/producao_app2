@@ -1,13 +1,15 @@
 class Centrotrab {
   int? id;
   String nome;
+  int qtdop;
 
-  Centrotrab({this.id, required this.nome});
+  Centrotrab({this.id, required this.nome, required this.qtdop});
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'nome': nome,
+      'qtdop': qtdop,
     };
   }
 
@@ -15,6 +17,7 @@ class Centrotrab {
     return Centrotrab(
       id: map['id'],
       nome: map['nome'],
+      qtdop: map['qtdop'],
     );
   }
 
@@ -22,8 +25,7 @@ class Centrotrab {
     return Centrotrab(
       id: json['id'],
       nome: json['nome'],
+      qtdop: json['qtdop'],
     );
   }
-
-
 }

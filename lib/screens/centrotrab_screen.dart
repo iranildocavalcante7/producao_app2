@@ -11,7 +11,9 @@ import 'package:producao_app/screens/SelectOrdens.dart';
 class CentroTrabScreen extends StatefulWidget {
   var operador;
   var nome;
-  CentroTrabScreen(this.operador, this.nome);
+  final String ip;
+
+  CentroTrabScreen(this.operador, this.nome, this.ip);
   @override
   _CentroTrabScreenState createState() => _CentroTrabScreenState();
 }
@@ -224,7 +226,7 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
           onTap: () {
             var route = MaterialPageRoute(
                 builder: (BuildContext context) => SelectOrdens(widget.operador,
-                    centrotrab.nome, centrotrab.id, widget.nome));
+                    centrotrab.nome, centrotrab.id, widget.nome, widget.ip));
             Navigator.of(context).push(route);
           },
           child: Container(
@@ -249,7 +251,7 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(5),
                           color:
-                              centrotrab.id == 39 ? Colors.green : Colors.red,
+                              centrotrab.qtdop == 0 ? Colors.red : Colors.green,
                         ),
                         child: Center(
                           child: Text(
@@ -287,14 +289,16 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "TEMPERATURA",
+                              //"TEMPERATURA",
+                              "QUANTIDADE OP(s)",
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white),
                             ),
                             Text(
-                              '${'ºC'}',
+                              //'${'ºC'}',
+                              '${centrotrab.qtdop}',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   fontSize: 14,
@@ -306,7 +310,7 @@ class _CentroTrabScreenState extends State<CentroTrabScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(5),
                           color:
-                              centrotrab.id == 39 ? Colors.green : Colors.red,
+                              centrotrab.qtdop == 0 ? Colors.red : Colors.green,
                         ),
                       ),
                     ],

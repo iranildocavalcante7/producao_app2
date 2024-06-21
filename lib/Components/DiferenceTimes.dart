@@ -2,10 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
+import 'package:xml/xml.dart' as xml;
+import 'package:convert/convert.dart';
 
 class DiferenceTimes extends StatefulWidget {
   String etapa;
-  DiferenceTimes(this.etapa);
+  var ip;
+  var cod_produto;
+  DiferenceTimes(this.etapa, this.ip, this.cod_produto);
   @override
   _DiferenceTimesState createState() => _DiferenceTimesState();
 }
@@ -21,7 +27,20 @@ class _DiferenceTimesState extends State<DiferenceTimes> {
   }
 
   Future<void> _fetchDelayTimeFromAPI() async {
-    final response = await http.get(Uri.parse('http://10.0.1.135:5000/fluxo_detail?codseq=${widget.etapa}'));
+    //final response = await http.get(Uri.parse(
+    //'http://${widget.ip}:5000/fluxo_detail?codseq=${widget.etapa}&codprod=${widget.cod_produto}'));
+
+    String vsql = '''
+              SELECT PRO.CODPROD as codProduto, pre.descpre as etapa, PRE.SEQPRE as prioridade
+                , isnull(Convert(Time(0),pre.TEMPO,0),'00:00:00')  as tempoAgitacao,  isnull(PRE.TEMPERATURA,0) as temperatura 
+              FROM AD_MODPRE PRE 
+              join TGFPRO PRO ON PRO.CODPROD = PRE.CODPROD  
+              WHERE PRO.CODPROD = ${widget.cod_produto} 
+                AND PRE.SEQPRE = ${widget.etapa} order by 1,3
+            ''';
+
+    var response = await ApiService.DbExplorer(vsql);
+
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       final rows = data['responseBody']['rows'];
@@ -33,6 +52,8 @@ class _DiferenceTimesState extends State<DiferenceTimes> {
     } else {
       throw Exception('Falha ao carregar os dados da API');
     }
+
+    await ApiService.closeSession();
   }
 
   List<dynamic> rowsData = [];

@@ -56,7 +56,7 @@ class ApiService {
         if (status == "1") {
           jsessionid =
               'JSESSIONID=${document.findAllElements('jsessionid').first.text}';
-          ParceiroSync();
+          CentroSync();
         } else {
           print('Usuário ou senha invalido!!!');
         }
@@ -68,20 +68,39 @@ class ApiService {
     }
   }
 
-  static Future<void> ParceiroSync() async {
+  static Future<void> CentroSync() async {
     final DatabaseHelper _dbHelper = DatabaseHelper();
 
     var _url = '';
     _url =
         '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
 
-    const String Body = '''
-                        {"serviceName":"DbExplorerSP.executeQuery",
-                            "requestBody": {
-                            "sql": "select CODWCP, NOME FROM TPRWCP WCP JOIN TPRCWC CWC ON CWC.CODCWC = WCP.CODCWC WHERE CODWCP <> 0 AND WCP.CODCWC = 5 "
-                            }
-                          }    
-                        ''';
+    var _sql = '''
+              select CODWCP
+                , NOME 
+                , COUNT(DISTINCT codOrdem) QTDOP
+              FROM TPRWCP WCP 
+              JOIN TPRCWC CWC ON CWC.CODCWC = WCP.CODCWC 
+              LEFT JOIN (
+                select codOrdem 
+                  , codCentro
+                from AD_VAPP_OPS_SMART 
+                group by codOrdem
+                  , codCentro
+              ) OP on (OP.codCentro = WCP.CODWCP)
+              WHERE CODWCP <> 0 
+              AND WCP.CODCWC = 5
+              group by CODWCP
+                , NOME 
+          ''';
+
+    String Body = '''
+                  {"serviceName":"DbExplorerSP.executeQuery",
+                     "requestBody": {
+                       "sql": "${_sql}"
+                     }
+                  }    
+                 ''';
 
     try {
       final headers = {
@@ -105,10 +124,12 @@ class ApiService {
           await _dbHelper.deleteCentrotrabAll();
 
           for (var i = 0; i < _rows.length; i++) {
-            print('Parceiro: ${_rows[i][1]}');
+            print('Centro: ${_rows[i][1]}');
+            print('Qtd. Op: ${_rows[i][2]}');
 
             // limpa todos os Parceiros
-            final _centro = Centrotrab(id: _rows[i][0], nome: _rows[i][1]);
+            final _centro = Centrotrab(
+                id: _rows[i][0], nome: _rows[i][1], qtdop: _rows[i][2]);
 
             // incluir o Centro trabalho
             await _dbHelper.insertCentrotrab(_centro);
@@ -205,5 +226,33 @@ class ApiService {
     } catch (e) {
       print('Error occurred: $e');
     }
+  }
+
+  static Future<http.Response> DbExplorer(String vsql) async {
+    String _servidor = '';
+    String jsessionid = await ApiService.openSession();
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+
+    var _url =
+        '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
+
+    String Body = '''
+                 {"serviceName":"DbExplorerSP.executeQuery",
+                     "requestBody": {
+                     "sql": "${vsql}"
+                       }
+                  }    
+                  ''';
+
+    final headers = {'Content-Type': 'application/json', 'Cookie': jsessionid};
+
+    final response = await http.post(
+      Uri.parse(_url),
+      headers: headers,
+      body: utf8.encode(Body),
+    );
+    return response;
   }
 }

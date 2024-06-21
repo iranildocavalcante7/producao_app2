@@ -14,23 +14,22 @@ class LoginScreen extends StatefulWidget {
   _LoginScreenState createState() => _LoginScreenState();
 }
 
-
 class _LoginScreenState extends State<LoginScreen> {
   final loading = ValueNotifier<bool>(false);
-  
+
   TextEditingController _matriculaController = TextEditingController();
-  
+
   TextEditingController _servidorController = TextEditingController();
   TextEditingController _usuarioController = TextEditingController();
   TextEditingController _senhaController = TextEditingController();
-  
-  String _servidor = 'http://10.0.0.254:8280'; // IP padrão
-  String _usuario= 'iranildo'; // IP padrão
-  String _senha= '123456'; // IP padrão
 
-  String _appVersion  ="";
-  
-  
+  String _ip = '10.0.1.135'; // IP padrão
+  String _servidor = 'http://10.0.0.254:8280'; // IP padrão
+  String _usuario = 'iranildo'; // IP padrão
+  String _senha = '123456'; // IP padrão
+
+  String _appVersion = "";
+
   @override
   void initState() {
     super.initState();
@@ -38,39 +37,41 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadIp();
   }
 
-  
-
   Future<void> _loadAppVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
       _appVersion = packageInfo.version;
     });
-    }
-  
-  Future<void> fetchData(context) async {
-      final DatabaseHelper _db = DatabaseHelper();
-      String vMat = _matriculaController.text;
-      if (vMat == ""){
-          _showDialog(context,"Matrícula invalida!!!");
-          return;
-      }
-      int vCod = int.parse(vMat);
-      //var vCodUsu = _db.findUsuarioById(vCod);
-      Usuario? usuario = await _db.findUsuarioById(vCod);
-      if (usuario != null){
-        //print(usuario.id);
-        //print(usuario.nome);
-        var route = MaterialPageRoute(
-            builder: (BuildContext context) => CentroTrabScreen(usuario.id,usuario.nome));
-        Navigator.of(context).pushReplacement(route);
-      }else{
-          print('Usuário não encontrado!!!');
-          _showDialog(context,"Usuário não encontrado!!!");
-          return;
-      }
   }
 
-  void _showDialog(BuildContext context,String msg) {
+  Future<void> fetchData(context) async {
+    final DatabaseHelper _db = DatabaseHelper();
+    String vMat = _matriculaController.text;
+    if (vMat == "") {
+      _showDialog(context, "Matrícula invalida!!!");
+      return;
+    }
+    int vCod = int.parse(vMat);
+
+    Usuario? usuario = await _db.findUsuarioById(vCod);
+    if (usuario != null) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('_ip', _ip);
+      await prefs.setString('idUsuLogado', usuario.id.toString());
+      await prefs.setString('UsuLogado', usuario.nome);
+
+      var route = MaterialPageRoute(
+          builder: (BuildContext context) =>
+              CentroTrabScreen(usuario.id, usuario.nome, _ip));
+      Navigator.of(context).pushReplacement(route);
+    } else {
+      print('Usuário não encontrado!!!');
+      _showDialog(context, "Usuário não encontrado!!!");
+      return;
+    }
+  }
+
+  void _showDialog(BuildContext context, String msg) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -94,12 +95,12 @@ class _LoginScreenState extends State<LoginScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254:8280';
-      _usuario  = prefs.getString('api_usuario') ?? 'iranildo';
-      _senha    = prefs.getString('api_senha') ?? '123456';
+      _usuario = prefs.getString('api_usuario') ?? 'iranildo';
+      _senha = prefs.getString('api_senha') ?? '123456';
     });
   }
 
-  Future<void> _saveIp(String servidor,usuario,senha) async {
+  Future<void> _saveIp(String servidor, usuario, senha) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('api_servidor', servidor);
     await prefs.setString('api_usuario', usuario);
@@ -136,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Fechar o diálogo de progresso
     Navigator.of(context).pop();
-    
+
     // Exibir um diálogo de confirmação ou mensagem de sucesso/erro
     showDialog(
       context: context,
@@ -155,9 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       },
     );
-
   }
-
 
   void _showParamServidorDialog() {
     _servidorController.text = _servidor; // Preenche o campo com o IP atual
@@ -202,13 +201,14 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();                  
+                Navigator.of(context).pop();
                 setState(() {
                   // Fechar o diálogo de entrada
                   _servidor = _servidorController.text;
-                  _usuario  = _usuarioController.text;
-                  _senha    = _senhaController.text;
-                  _saveIp(_servidor, _usuario, _senha); // Salvar IP no SharedPreferences
+                  _usuario = _usuarioController.text;
+                  _senha = _senhaController.text;
+                  _saveIp(_servidor, _usuario,
+                      _senha); // Salvar IP no SharedPreferences
                 });
               },
               child: Text('Salvar'),
@@ -219,13 +219,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFF8F9FA),
-
       body: SingleChildScrollView(
         child: Center(
           child: Container(
@@ -259,7 +256,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             padding: EdgeInsets.fromLTRB(30, 0, 30, 0),
                             child: Padding(
                               padding: EdgeInsets.all(20),
-                              child: Image.asset("assets/logoalyne.png", fit: BoxFit.fill,),
+                              child: Image.asset(
+                                "assets/logoalyne.png",
+                                fit: BoxFit.fill,
+                              ),
                             ),
                           ),
                         ),
@@ -279,8 +279,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white, width: 0),
-                              borderRadius: BorderRadius.all(Radius.circular(4)),
+                              borderSide:
+                                  BorderSide(color: Colors.white, width: 0),
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(4)),
                             ),
                             labelText: "Insira sua Matrícula",
                             labelStyle: TextStyle(
@@ -289,7 +291,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                        
                         Container(
                           margin: EdgeInsets.only(top: 30),
                           height: 45,
@@ -318,29 +319,26 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-
-                      SizedBox(
+                        SizedBox(
                           height: 10,
                         ),
-
-                      Text(
-                        "Alterar Servidor",
-                        style: TextStyle(
-                            color: Color(0xFF2A53A1),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      GestureDetector(
-                        child: Icon(
-                          Icons.sync_lock_rounded,
-                          color: Colors.blue,
-                          size: 28,
+                        Text(
+                          "Alterar Servidor",
+                          style: TextStyle(
+                              color: Color(0xFF2A53A1),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
                         ),
-                        onTap: () {
-                          _showParamServidorDialog();
-                        },
-                      ),
-                      
+                        GestureDetector(
+                          child: Icon(
+                            Icons.sync_lock_rounded,
+                            color: Colors.blue,
+                            size: 28,
+                          ),
+                          onTap: () {
+                            _showParamServidorDialog();
+                          },
+                        ),
                       ],
                     ),
                   ),

@@ -1,20 +1,20 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
-import '../Components/CurrentTimes.dart';
-import '../Components/DiferenceTimes.dart';
-import '../Components/Temperatura.dart';
-import 'Fim.dart';
+import 'package:producao_app/Components/CurrentTimes.dart';
+import 'package:producao_app/Components/DiferenceTimes.dart';
+import 'package:producao_app/Components/Temperatura.dart';
+import 'package:producao_app/screens/Fim.dart';
 //import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
-import 'centrotrab_screen.dart';
+import 'package:producao_app/screens/centrotrab_screen.dart';
 import '../Components/dropdown_popup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'package:xml/xml.dart' as xml;
-import 'package:convert/convert.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class CentroData {
   final int codCentro;
@@ -57,8 +57,10 @@ class FluxoAlyne extends StatefulWidget {
   var cod_centro;
   var nome;
   var idiatv;
+  var ip;
+
   FluxoAlyne(this.produto, this.etapa, this.operador, this.cod_produto,
-      this.cod_ordem, this.cod_centro, this.nome, this.idiatv);
+      this.cod_ordem, this.cod_centro, this.nome, this.idiatv, this.ip);
 
   @override
   _FluxoAlyneState createState() => _FluxoAlyneState();
@@ -98,9 +100,21 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
   }
 
   void fetchEtapas() async {
-    final Uri apiUrl =
-        Uri.parse("http://10.0.1.135:5000/fluxo?codprod=${widget.cod_produto}");
-    final response = await http.get(apiUrl);
+    //final Uri apiUrl = Uri.parse(
+    //  "http://${widget.ip}:5000/fluxo?codprod=${widget.cod_produto}");
+
+    String vsql = '''
+                SELECT PRO.CODPROD as codProduto, pre.descpre as etapa, PRE.SEQPRE as prioridade
+                  , isnull(Convert(Time(0),pre.TEMPO,0),'00:00:00')  as tempoAgitacao
+                  , isnull(PRE.TEMPERATURA,0) as temperatura 
+                FROM AD_MODPRE PRE 
+                JOIN TGFPRO PRO ON PRO.CODPROD = PRE.CODPROD  
+                WHERE PRO.CODPROD = ${widget.cod_produto} 
+                  AND PRE.SEQPRE = ${widget.etapa} 
+                order by 1,3
+            ''';
+
+    var response = await ApiService.DbExplorer(vsql);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -121,6 +135,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
     } else {
       etapas = [];
     }
+
+    await ApiService.closeSession();
   }
 
   void nextEtapa() {
@@ -143,7 +159,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
               '${widget.cod_ordem}',
               '${widget.cod_centro}',
               widget.nome,
-              widget.idiatv));
+              widget.idiatv,
+              widget.ip));
       Navigator.of(context).push(route);
     } else {
       var route = MaterialPageRoute(
@@ -155,7 +172,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
               '${widget.cod_produto}',
               '${widget.cod_centro}',
               widget.nome,
-              widget.idiatv));
+              widget.idiatv,
+              widget.ip));
       Navigator.of(context).push(route);
     }
     setState(() {});
@@ -183,6 +201,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
   Stopwatch _stopwatchFluxo = Stopwatch();
   String _tempoDecorridoFluxo = '00:00:00';
   String _tempoFluxo = '00:00:00';
+
   void _startStopwatchFluxo() {
     _stopwatchFluxo.start();
     Timer.periodic(Duration(milliseconds: 100), (timer) {
@@ -213,17 +232,6 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
     });
   }
 
-  void _stopStopwatch() {
-    _stopwatch.stop();
-  }
-
-  void _resetStopwatch() {
-    _stopwatch.reset();
-    setState(() {
-      _tempoDecorrido = '00:00:00';
-    });
-  }
-
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
@@ -235,8 +243,9 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
   String _temperaturaHw = '';
   String _pesoHw = '';
   List<dynamic> _hardware = [];
+
   Future<dynamic> fetchHardware() async {
-    String apiFunc = 'http://10.0.1.135/api/GetAuto.php';
+    String apiFunc = 'http://${widget.ip}/api/GetAuto.php';
     var data = {'codigo': widget.cod_centro};
     http.Response response =
         await http.post(Uri.parse(apiFunc), body: json.encode(data));
@@ -250,8 +259,9 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
   List<dynamic> _auto = [];
   dynamic _temperatura = '';
   dynamic _temperatura2 = '';
+
   Future<dynamic> fetchAuto() async {
-    String apiFunc = 'http://10.0.1.135/api/GetAuto.php';
+    String apiFunc = 'http://${widget.ip}/api/GetAuto.php';
     var data = {'codigo': widget.cod_centro};
     http.Response response =
         await http.post(Uri.parse(apiFunc), body: json.encode(data));
@@ -289,7 +299,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                           '${widget.cod_ordem}',
                           '${widget.cod_centro}',
                           '${widget.nome}',
-                          '${widget.idiatv}'));
+                          '${widget.idiatv}',
+                          widget.ip));
                   Navigator.of(context).pushReplacement(route);
                 } else {
                   //FlutterRingtonePlayer.stop();
@@ -302,7 +313,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                           '${widget.cod_produto}',
                           '${widget.cod_centro}',
                           widget.nome,
-                          '${widget.idiatv}'));
+                          '${widget.idiatv}',
+                          widget.ip));
                   Navigator.of(context).push(route);
                 }
                 setState(() {});
@@ -327,15 +339,14 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
   String tempoVariavel = "00:01:00";
   late DateTime inicio;
 
-  String phpurl = "http://10.0.1.135/api/InsertMudEtapa.php";
-  String urlQr = "http://10.0.1.135/api/InsertQr.php";
   bool error = false;
   bool sending = false;
   bool success = false;
   String msg = "";
 
   Future<void> sendData() async {
-    var res = await http.post(Uri.parse(phpurl), body: {
+    var res = await http
+        .post(Uri.parse("http://${widget.ip}/api/InsertMudEtapa.php"), body: {
       "cod_ordem": "${widget.cod_produto.toString()}",
       "cod_produto": "${widget.cod_ordem.toString()}",
       "etapa": "${widget.etapa}",
@@ -388,7 +399,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
   }
 
   Future<void> sendDataQr(String qr) async {
-    var res = await http.post(Uri.parse(urlQr), body: {
+    var res = await http
+        .post(Uri.parse("http://${widget.ip}/api/InsertQr.php"), body: {
       "cod_ordem": "${widget.cod_ordem}",
       "cod_produto": "${widget.cod_produto}",
       "cod_centro": "${widget.cod_centro}",
@@ -443,32 +455,20 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
 
   Future<void> fetchData2() async {
     //final response = await http.get(Uri.parse(
-    //'http://10.0.1.135:5000/fluxo_detail?codseq=${widget.etapa}&codprod=${widget.cod_produto}'));
+    //'http://${widget.ip}:5000/fluxo_detail?codseq=${widget.etapa}&codprod=${widget.cod_produto}'));
 
-    String _servidor = '';
-    String jsessionid = await ApiService.openSession();
+    String vsql = '''
+              SELECT PRO.CODPROD as codProduto, pre.descpre as etapa, PRE.SEQPRE as prioridade
+                  , isnull(Convert(Time(0),pre.TEMPO,0),'00:00:00')  as tempoAgitacao
+                  ,  isnull(PRE.TEMPERATURA,0) as temperatura 
+              FROM AD_MODPRE PRE 
+              join TGFPRO PRO ON PRO.CODPROD = PRE.CODPROD  
+              WHERE PRO.CODPROD = ${widget.cod_produto} 
+                AND PRE.SEQPRE = ${widget.etapa} 
+              order by 1,3  
+            ''';
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
-
-    var _url =
-        '${_servidor}/mge/service.sbr?serviceName=DbExplorerSP.executeQuery&outputType=json';
-
-    String Body = '''
-                 {"serviceName":"DbExplorerSP.executeQuery",
-                     "requestBody": {
-                     "sql": "SELECT PRO.CODPROD as codProduto, pre.descpre as etapa, PRE.SEQPRE as prioridade, isnull(pre.TEMPO,'00:00:00') as tempoAgitacao, isnull(PRE.TEMPERATURA,0)  as temperatura FROM AD_MODPRE PRE join TGFPRO PRO ON PRO.CODPROD = PRE.CODPROD  WHERE PRO.CODPROD = ${widget.cod_produto} AND PRE.SEQPRE = ${widget.etapa} order by 1,3"
-                       }
-                  }    
-                  ''';
-
-    final headers = {'Content-Type': 'application/json', 'Cookie': jsessionid};
-
-    final response = await http.post(
-      Uri.parse(_url),
-      headers: headers,
-      body: utf8.encode(Body),
-    );
+    var response = await ApiService.DbExplorer(vsql);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -505,6 +505,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
     } else {
       throw Exception('Falha ao carregar os dados da API');
     }
+    await ApiService.closeSession();
   }
 
   Duration parseTempo(String tempo) {
@@ -517,21 +518,65 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
   }
 
   Future<void> criarApontamento() async {
-    final String url =
-        'http://10.0.1.135:5000/post_apontar?idiatv=${widget.idiatv}';
+    //final String url =
+    //'http://${widget.ip}:5000/post_apontar?idiatv=${widget.idiatv}';
+
+    String _servidor = '';
+    String jsessionid = await ApiService.openSession();
+    jsessionid = jsessionid.split('=')[1];
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+
+    var _url =
+        '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.criarApontamento&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
+
+    String Body = '''
+                  <serviceRequest serviceName="OperacaoProducaoSP.criarApontamento">
+                    <requestBody>
+                      <params IDIATV="${widget.idiatv}" QTDAPONTADA="1"/>
+                    </requestBody>
+                  </serviceRequest>
+                  ''';
+
+    final headers = {'Content-Type': 'application/xml', 'Cookie': jsessionid};
+
+    final response = await http.post(
+      Uri.parse(_url),
+      headers: headers,
+      body: utf8.encode(Body),
+    );
 
     try {
-      final response = await http.get(Uri.parse(url));
-
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        String status = data['status'];
-        String statusMessage = data['statusMessage'];
-        String NUAPO = data['NUAPO'];
-        String LISTAPENDENTES = data['LISTAPENDENTES'];
+        final document = xml.XmlDocument.parse(response.body);
+        final serviceResponse =
+            document.findAllElements('serviceResponse').first;
+
+        final status = serviceResponse.getAttribute('status');
+        //final statusMessage = serviceResponse.getAttribute('statusMessage').tost;
+
+        // Encontre o elemento apontamento
+        var apontamentoElement = document.findAllElements('apontamento').first;
+
+        // Extraia o valor do atributo NUAPO
+        String NUAPO = apontamentoElement.getAttribute('NUAPO').toString();
+        String LISTAPENDENTES =
+            apontamentoElement.getAttribute('LISTAPENDENTES').toString();
+
         setState(() {
-          _NUAPO = data['NUAPO'];
+          //_NUAPO = data['NUAPO'];
+          _NUAPO = apontamentoElement.getAttribute('NUAPO').toString();
         });
+
+        String decodedString = "";
+        if (NUAPO == "") {
+          decodedString =
+              "Apontamento esta pendente para confirmar. Produto.: $LISTAPENDENTES";
+        } else {
+          decodedString = "Apontamento criado com Sucesso!!! NuApo.: $NUAPO";
+        }
+
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -558,10 +603,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                       ),
                     ),
                     SizedBox(height: 12.0),
-                    Text('Status: $status'),
-                    Text('Mensagem: $statusMessage'),
-                    Text('NUAPO: $NUAPO'),
-                    Text('LISTAPENDENTES: $LISTAPENDENTES'),
+                    Text('Mensagem: $decodedString'),
                     SizedBox(height: 12.0),
                     ElevatedButton(
                       onPressed: () {
@@ -579,37 +621,77 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
           },
         );
       } else {
-        print('Erro na requisição: ${response.statusCode}');
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('Erro durante a requisição: $e');
       setState(() {
         _isLoading = false;
       });
     }
+
+    await ApiService.closeSession();
   }
 
   Future<void> liberarCentro() async {
-    final String url =
-        'http://10.0.1.135:5000/post_liberarcentro?idiatv=${widget.idiatv}';
+    //final String url =
+    //  'http://${widget.ip}:5000/post_liberarcentro?idiatv=${widget.idiatv}';
+
+    String _servidor = '';
+    String jsessionid = await ApiService.openSession();
+    jsessionid = jsessionid.split('=')[1];
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+
+    var _url =
+        '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.liberarCentroDeTrabalho&counter=4040370301&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
+
+    String Body = '''
+                 <serviceRequest serviceName="OperacaoProducaoSP.liberarCentroDeTrabalho">
+                  <requestBody>
+                      <instancias>
+                          <instancia>
+                              <IDIATV>${widget.idiatv}</IDIATV>
+                          </instancia>
+                      </instancias>
+                    </requestBody>
+                  </serviceRequest>
+                  ''';
+
+    final headers = {'Content-Type': 'application/xml', 'Cookie': jsessionid};
+
+    final response = await http.post(
+      Uri.parse(_url),
+      headers: headers,
+      body: utf8.encode(Body),
+    );
 
     try {
-      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        String status = data['status'];
-        String statusMessage = data['statusMessage'];
+        final document = xml.XmlDocument.parse(response.body);
+        final serviceResponse =
+            document.findAllElements('serviceResponse').first;
+
+        final status = serviceResponse.getAttribute('status');
+
         if (status == "1") {
-          /*
           Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) => Centro(widget.operador, widget.nome)));
-                  */
+                  builder: (context) => CentroTrabScreen(
+                      widget.operador, widget.nome, widget.ip)));
         } else {
+          final statusMessage = document.findAllElements('statusMessage').first;
+          final cdataContent = statusMessage.text.trim();
+          // limpa a string para BASE64
+          final cleanedContent =
+              cdataContent.replaceAll('\n', '').replaceAll(' ', '');
+          // Decodifique a string BASE64
+          final decodedBytes = base64Decode(cleanedContent);
+          final decodedString = String.fromCharCodes(decodedBytes);
+
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -637,7 +719,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                       ),
                       SizedBox(height: 12.0),
                       Text('Status: $status'),
-                      Text('Mensagem: $statusMessage'),
+                      Text('Mensagem: $decodedString'),
                       SizedBox(height: 12.0),
                       ElevatedButton(
                         onPressed: () {
@@ -663,9 +745,12 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
         _isLoading = false;
       });
     }
+
+    await ApiService.closeSession();
   }
 
   TextEditingController _textController = TextEditingController();
+
   void qntApontada() {
     showDialog(
       context: context,
@@ -709,16 +794,66 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
   }
 
   Future<void> salvarApontamento() async {
-    final String url =
-        'http://10.0.1.135:5000/post_salvarapontamento?qnt=${_textController.text}&nuapo=${nuapo}&seqapa=${seqapa}';
+    //final String url =
+    //  'http://${widget.ip}:5000/post_salvarapontamento?qnt=${_textController.text}&nuapo=${nuapo}&seqapa=${seqapa}';
+
+    String _servidor = '';
+    String jsessionid = await ApiService.openSession();
+    //jsessionid = jsessionid.split('=')[1];
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+
+    var _url =
+        '${_servidor}/mge/service.sbr?serviceName=CRUDServiceProvider.saveRecord&application=OperacaoProducao&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
+
+    String Body = '''
+        <serviceRequest serviceName="CRUDServiceProvider.saveRecord" ><requestBody>
+          <dataSet rootEntity="ApontamentoPA" includePresentationFields="S" datasetid="1658322435343_10">
+          <entity path=""><fieldset list="*"/><field name="CONTROLEPA"/></entity>
+          <entity path="Produto"><fieldset list="DECQTD,TIPCONTEST"/></entity>
+          <entity path="MotivosPerda"><field name="DESCRICAO"/></entity>
+              <dataRow>
+                  <localFields>
+                      <QTDAPONTADA>${_textController.text}</QTDAPONTADA>
+                  </localFields>
+                  <key>
+                      <NUAPO>${nuapo}</NUAPO>
+                      <SEQAPA>${seqapa}</SEQAPA>
+                  </key>
+              </dataRow>
+          </dataSet>
+        </requestBody></serviceRequest>
+             ''';
+
+    final headers = {'Content-Type': 'application/xml', 'Cookie': jsessionid};
+
+    final response = await http.post(
+      Uri.parse(_url),
+      headers: headers,
+      body: utf8.encode(Body),
+    );
 
     try {
-      final response = await http.get(Uri.parse(url));
-
+      String decodedString = "";
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        String status = data['status'];
-        String statusMessage = data['statusMessage'];
+        final document = xml.XmlDocument.parse(response.body);
+        final serviceResponse =
+            document.findAllElements('serviceResponse').first;
+
+        final status = serviceResponse.getAttribute('status');
+        if (status == "1") {
+          decodedString = "Apontamento alterado com sucesso!!!";
+        } else {
+          final statusMessage = document.findAllElements('statusMessage').first;
+          final cdataContent = statusMessage.text.trim();
+          // limpa a string para BASE64
+          final cleanedContent =
+              cdataContent.replaceAll('\n', '').replaceAll(' ', '');
+          // Decodifique a string BASE64
+          final decodedBytes = base64Decode(cleanedContent);
+          decodedString = String.fromCharCodes(decodedBytes);
+        }
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -746,7 +881,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                     ),
                     SizedBox(height: 12.0),
                     Text('Status: $status'),
-                    Text('Mensagem: $statusMessage'),
+                    Text('Mensagem: $decodedString'),
                     SizedBox(height: 12.0),
                     ElevatedButton(
                       onPressed: () {
@@ -764,33 +899,71 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
           },
         );
       } else {
-        print('Erro na requisição: ${response.statusCode}');
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('Erro durante a requisição: $e');
       setState(() {
         _isLoading = false;
       });
     }
+
+    await ApiService.closeSession();
   }
 
   bool _isLoading = false;
 
   Future<void> confirmarApontamento() async {
-    final String url =
-        'http://10.0.1.135:5000/post_confirmarapontamento?nuapo=${nuapo}&idiatv=${widget.idiatv}';
+    //final String url =
+    //'http://${widget.ip}:5000/post_confirmarapontamento?nuapo=${nuapo}&idiatv=${widget.idiatv}';
+
+    String _servidor = '';
+    String jsessionid = await ApiService.openSession();
+    jsessionid = jsessionid.split('=')[1];
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+
+    var _url =
+        '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.confirmarApontamento&application=OperacaoProducao&mgeSession=${jsessionid}&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
+
+    String Body = '''
+        <serviceRequest serviceName="mgeprod@OperacaoProducaoSP.confirmarApontamento">
+            <requestBody>
+                <params NUAPO="${nuapo}" IDIATV="${widget.idiatv}" ACEITARQTDMAIOR="false" ULTIMOAPONTAMENTO="false" RESPOSTA_ULTIMO_APONTAMENTO="false"/>
+            </requestBody>
+        </serviceRequest>
+             ''';
+
+    final headers = {'Content-Type': 'application/xml', 'Cookie': jsessionid};
+
+    final response = await http.post(
+      Uri.parse(_url),
+      headers: headers,
+      body: utf8.encode(Body),
+    );
 
     try {
-      final response = await http.get(Uri.parse(url));
-
+      String decodedString = "";
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        String status = data['status'];
-        String statusMessage = data['statusMessage'];
+        final document = xml.XmlDocument.parse(response.body);
+        final serviceResponse =
+            document.findAllElements('serviceResponse').first;
 
+        final status = serviceResponse.getAttribute('status');
+        if (status == "1") {
+          decodedString = "Apontamento confirmado com sucesso!!!";
+        } else {
+          final statusMessage = document.findAllElements('statusMessage').first;
+          final cdataContent = statusMessage.text.trim();
+          // limpa a string para BASE64
+          final cleanedContent =
+              cdataContent.replaceAll('\n', '').replaceAll(' ', '');
+          // Decodifique a string BASE64
+          final decodedBytes = base64Decode(cleanedContent);
+          decodedString = String.fromCharCodes(decodedBytes);
+        }
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -818,7 +991,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                     ),
                     SizedBox(height: 12.0),
                     Text('Status: $status'),
-                    Text('Mensagem: $statusMessage'),
+                    Text('Mensagem: $decodedString'),
                     SizedBox(height: 12.0),
                     ElevatedButton(
                       onPressed: () {
@@ -845,95 +1018,67 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
         _isLoading = false;
       });
     }
-  }
 
-  Future<void> confirmarApontamento2() async {
-    final String url =
-        'http://10.0.1.135:5000/post_confirmarapontamento?nuapo=${nuapo}&idiatv=${widget.idiatv}';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        String status = data['status'];
-        String statusMessage = data['statusMessage'];
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              elevation: 0.0,
-              backgroundColor: Colors.transparent,
-              child: Container(
-                padding: EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Resposta Sankhya (Confirmar Apontamento)',
-                      style: TextStyle(
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 12.0),
-                    Text('Status: $status'),
-                    Text('Mensagem: $statusMessage'),
-                    SizedBox(height: 12.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text('Fechar'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      } else {
-        print('Erro na requisição: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erro durante a requisição: $e');
-    }
+    await ApiService.closeSession();
   }
 
   double _QTD_APRODUZ = 0.0;
   double _QTD_PRODUZ = 0.0;
   List<dynamic> rowsOP = [];
+
   Future<void> fetchOP() async {
-    final response = await http.get(Uri.parse(
-        'http://10.0.1.135:5000/ordem_producao_detail?codordem=${widget.cod_ordem}'));
+    //final response = await http.get(Uri.parse(
+    //  'http://${widget.ip}:5000/ordem_producao_detail?codordem=${widget.cod_ordem}'));
+
+    String vsql = '''
+              SELECT codOrdem, codProduto, descProduto, codCentro, descCentro
+                , processo, lote, localOrigem, localDestino, DHINICIO, DHFINAL
+                , DATASEQ, QTD_APRODUZ, QTD_PRODUZ, STATUSOP, IDIATV, IDPROC, IDEFX 
+              FROM sankhya.AD_VAPP_OPS_SMART 
+              WHERE codOrdem = ${widget.cod_ordem}
+            ''';
+
+    var response = await ApiService.DbExplorer(vsql);
 
     if (response.statusCode == 200) {
-      ;
-      final data = json.decode(response.body);
-      final rows = data['responseBody']['rows'];
-      setState(() {
-        rowsOP = rows;
-        _QTD_APRODUZ = rowsOP[0][12];
-        _QTD_PRODUZ = rowsOP[0][13];
-      });
+      var _resp = json.decode(response.body);
+      final _status = _resp['status'];
+      if (_status == "1") {
+        final respBody = _resp['responseBody'];
+        final rows = respBody['rows'];
+        setState(() {
+          rowsOP = rows;
+          _QTD_APRODUZ = rowsOP[0][12];
+          _QTD_PRODUZ = rowsOP[0][13];
+        });
+      } else {
+        final _statusMessage = _resp['statusMessage'];
+        var _mensage = _statusMessage;
+        print('Failed mensagem: ${_mensage}');
+      }
     } else {
       throw Exception('Falha ao carregar os dados da API');
     }
+    await ApiService.closeSession();
   }
 
   dynamic nuapo;
   dynamic seqapa;
   dynamic situacao;
+
   Future<void> fetchApontamentos() async {
-    final response = await http.get(Uri.parse(
-        'http://10.0.1.135:5000/apontamentos?idiatv=${widget.idiatv}'));
+    //final response = await http.get(Uri.parse(
+    // 'http://${widget.ip}:5000/apontamentos?idiatv=${widget.idiatv}'));
+
+    String vsql = '''
+              Select APO.NUAPO, APA.SEQAPA, isnull(APO.SITUACAO,'') 
+              from TPRAPO APO 
+              left join TPRAPA APA ON APA.NUAPO = APO.NUAPO 
+              WHERE IDIATV = ${widget.idiatv} AND SITUACAO = 'P'
+            ''';
+
+    var response = await ApiService.DbExplorer(vsql);
+
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       final rows = data['responseBody']['rows'];
@@ -948,6 +1093,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
     } else {
       throw Exception('Falha ao carregar os dados da API de apontamentos');
     }
+    await ApiService.closeSession();
   }
 
   @override
@@ -973,7 +1119,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
 
   Widget build(BuildContext context) {
     final centroDataFetcher = TemperaturaFetcher(
-        'http://10.0.1.135/api/GetAuto.php', widget.cod_centro);
+        'http://${widget.ip}/api/GetAuto.php', widget.cod_centro);
+
     return WillPopScope(
       onWillPop: () async {
         return false;
@@ -1347,7 +1494,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 22),
+                                            fontSize: 16),
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
@@ -1370,7 +1517,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                                             style: TextStyle(
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.bold,
-                                                fontSize: 22),
+                                                fontSize: 16),
                                             textAlign: TextAlign.center),
                                       )),
                                   GestureDetector(
@@ -1395,7 +1542,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                                           style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 22),
+                                              fontSize: 16),
                                           textAlign: TextAlign.center),
                                     ),
                                   ),
@@ -1420,7 +1567,7 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                                           style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 22),
+                                              fontSize: 18),
                                           textAlign: TextAlign.center),
                                     ),
                                   )
@@ -1481,7 +1628,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                                   ],
                                 ),
                               ),
-                              DiferenceTimes("${widget.etapa}"),
+                              DiferenceTimes("${widget.etapa}", widget.ip,
+                                  widget.cod_produto),
                               GestureDetector(
                                 onTap: () async {
                                   final selectedItem =
@@ -1493,7 +1641,8 @@ class _FluxoAlyneState extends State<FluxoAlyne> {
                                           widget.cod_ordem,
                                           widget.operador,
                                           widget.etapa,
-                                          widget.idiatv);
+                                          widget.idiatv,
+                                          widget.ip);
                                     },
                                   );
                                   if (selectedItem != null) {}

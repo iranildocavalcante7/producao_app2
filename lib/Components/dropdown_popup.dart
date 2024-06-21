@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:producao_app/screens/centrotrab_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
+import 'package:xml/xml.dart' as xml;
 
 class DropdownPopup extends StatefulWidget {
   var cod_centro;
@@ -9,8 +12,9 @@ class DropdownPopup extends StatefulWidget {
   var operador;
   var etapa;
   var idiatv;
-  DropdownPopup(
-      this.cod_centro, this.cod_ordem, this.operador, this.etapa, this.idiatv);
+  var ip;
+  DropdownPopup(this.cod_centro, this.cod_ordem, this.operador, this.etapa,
+      this.idiatv, this.ip);
   @override
   _DropdownPopupState createState() => _DropdownPopupState();
 }
@@ -19,15 +23,35 @@ class _DropdownPopupState extends State<DropdownPopup> {
   List<Map<String, dynamic>> _dropdownItems = [];
   Map<String, dynamic>? _selectedItem;
 
+  String _ip = ''; // IP padrão
+  String idUsuLogado = ''; // IP padrão
+  String UsuLogado = ''; // IP padrão
+
+  Future<void> _loadPref() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _ip = prefs.getString('_ip') ?? '10.0.1.135';
+      idUsuLogado = prefs.getString('idUsuLogado') ?? '';
+      UsuLogado = prefs.getString('UsuLogado') ?? '';
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _fetchDropdownData();
+    _loadPref();
   }
 
   Future<void> _fetchDropdownData() async {
-    final response =
-        await http.get(Uri.parse('http://10.0.1.135:5000/motivo_paradas'));
+    //final response =
+    //  await http.get(Uri.parse('http://10.0.1.135:5000/motivo_paradas'));
+
+    String vsql = '''
+              select CODMTP as codParada, DESCRICAO AS motivoParada, '' AS tipoParada from TPRMTP WHERE ATIVO <> 'N'
+            ''';
+
+    var response = await ApiService.DbExplorer(vsql);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -42,20 +66,68 @@ class _DropdownPopupState extends State<DropdownPopup> {
         }).toList();
       });
     }
+    await ApiService.closeSession();
   }
 
   Future<void> pararMaquina(int id) async {
-    final String url =
-        'http://10.0.1.135:5000/post_parar_maquina?idiatv=${widget.idiatv}&codmtp=${id}';
+    //final String url =
+    //'http://10.0.1.135:5000/post_parar_maquina?idiatv=${widget.idiatv}&codmtp=${id}';
+
+    String _servidor = '';
+    String jsessionid = await ApiService.openSession();
+    jsessionid = jsessionid.split('=')[1];
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+
+    var _url =
+        '${_servidor}/mgeprod/service.sbr?application=OperacaoProducao&mgeSession=${jsessionid}&serviceName=OperacaoProducaoSP.pararInstanciaAtividades';
+
+    String Body = '''
+                  <serviceRequest serviceName="OperacaoProducaoSP.pararInstanciaAtividades">
+                    <requestBody>
+                        <instancias tipoParada="P">
+                            <instancia>
+                                <IDIATV>${widget.idiatv}</IDIATV>
+                                <CODMTP>${id}</CODMTP>
+                                <OBSERVACAO/>
+                            </instancia>
+                        </instancias>
+                    </requestBody>
+                    </serviceRequest>
+                  ''';
+
+    final headers = {'Content-Type': 'application/xml', 'Cookie': jsessionid};
+
+    final response = await http.post(
+      Uri.parse(_url),
+      headers: headers,
+      body: utf8.encode(Body),
+    );
 
     try {
-      final response = await http.get(Uri.parse(url));
-
+      String decodedString = "";
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        String status = data['status'];
-        String statusMessage = data['statusMessage'];
-        String transactionId = data['transactionId'];
+        final document = xml.XmlDocument.parse(response.body);
+        final serviceResponse =
+            document.findAllElements('serviceResponse').first;
+
+        final status = serviceResponse.getAttribute('status');
+        if (status == "1") {
+          decodedString = "Maquina parada com sucesso!!!";
+        } else {
+          final statusMessage = document.findAllElements('statusMessage').first;
+          final cdataContent = statusMessage.text.trim();
+
+          // limpa a string para BASE64
+          final cleanedContent =
+              cdataContent.replaceAll('\n', '').replaceAll(' ', '');
+
+          // Decodifique a string BASE64
+          final decodedBytes = base64Decode(cleanedContent);
+          decodedString = String.fromCharCodes(decodedBytes);
+        }
+
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -83,19 +155,18 @@ class _DropdownPopupState extends State<DropdownPopup> {
                     ),
                     SizedBox(height: 12.0),
                     Text('Status: $status'),
-                    Text('Mensagem: $statusMessage'),
+                    Text('Mensagem: $decodedString'),
                     SizedBox(height: 12.0),
                     ElevatedButton(
                       onPressed: () {
                         enviarDadosParaAPI();
                         Navigator.of(context).pop();
-                        /*
+
                         var route = MaterialPageRoute(
                             builder: (BuildContext context) =>
-                                Centro(widget.operador, ''));
-                                
+                                CentroTrabScreen(idUsuLogado, UsuLogado, _ip));
+
                         Navigator.of(context).push(route);
-                        */
                       },
                       child: Text('Fechar'),
                     ),
