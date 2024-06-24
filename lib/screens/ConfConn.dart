@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/confconn.dart';
 import '../services/database_helper.dart';
-import 'package:producao_app/screens/login_screen.dart';
+import 'package:producao_app/screens/Login.dart';
 
 class ConfconnScreen extends StatefulWidget {
   @override
@@ -45,9 +45,12 @@ class _ConfconnScreenState extends State<ConfconnScreen> {
                   icon: Icon(Icons.edit),
                   onPressed: () {
                     // Implementar edição
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => ConfconnFormScreen(confconn: confconn),
-                    )).then((value) => _loadConfconn());
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ConfconnFormScreen(confconn: confconn),
+                        )).then((value) => _loadConfconn());
                   },
                 ),
                 /*
@@ -107,7 +110,8 @@ class _ConfconnFormScreenState extends State<ConfconnFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.confconn == null ? 'Adicionar Conexão' : 'Editar Conexão'),
+        title: Text(
+            widget.confconn == null ? 'Adicionar Conexão' : 'Editar Conexão'),
         backgroundColor: Color(0xFF2A53A1),
       ),
       body: Padding(
@@ -120,45 +124,49 @@ class _ConfconnFormScreenState extends State<ConfconnFormScreen> {
                 initialValue: widget.confconn?.endereco,
                 decoration: InputDecoration(labelText: 'Endereço'),
                 onSaved: (value) => _endereco = value!,
-                validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Campo obrigatório' : null,
               ),
               TextFormField(
                 initialValue: widget.confconn?.usuario,
                 decoration: InputDecoration(labelText: 'Usuário'),
                 onSaved: (value) => _usuario = value!,
-                validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Campo obrigatório' : null,
               ),
               TextFormField(
                 initialValue: widget.confconn?.senha,
                 decoration: InputDecoration(labelText: 'Senha'),
                 onSaved: (value) => _senha = value!,
-                validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Campo obrigatório' : null,
               ),
               TextFormField(
                 initialValue: widget.confconn?.codven,
                 decoration: InputDecoration(labelText: 'Cod. Vendedor'),
                 onSaved: (value) => _codven = value!,
-                validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Campo obrigatório' : null,
               ),
-
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
-                    final confconn = Confconn(id: widget.confconn?.id
-                        , endereco: _endereco
-                        , usuario: _usuario
-                        , senha: _senha
-                        , codven: _codven);
+                    final confconn = Confconn(
+                        id: widget.confconn?.id,
+                        endereco: _endereco,
+                        usuario: _usuario,
+                        senha: _senha,
+                        codven: _codven);
                     if (widget.confconn == null) {
                       await _dbHelper.insertConfconn(confconn);
                     } else {
                       await _dbHelper.updateConfconn(confconn);
                     }
                     var route = MaterialPageRoute(
-                                  builder:(BuildContext context) => LoginScreen());
-                                Navigator.of(context).pushReplacement(route);                    
+                        builder: (BuildContext context) => LoginScreen());
+                    Navigator.of(context).pushReplacement(route);
                     //Navigator.pop(context);
                   }
                 },

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../Data/Dado.dart';
 import 'DetalhesOp.dart';
-import 'login_screen.dart';
+import 'Login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'package:xml/xml.dart' as xml;
@@ -116,7 +116,7 @@ class _SelectOrdensState extends State<SelectOrdens> {
               SELECT codOrdem,codProduto,descProduto,codCentro,descCentro,processo,lote
                 , localOrigem , localDestino,dhInicio,dhFinal,dataSeq,qtd_AProduz,qtd_Produz,
                 statusOP,CODMTP,MOTPARADA,IDIATV,IDPROC,IDEFX 
-                FROM sankhya.AD_VAPP_OPS_SMART
+              FROM sankhya.AD_VAPP_OPS_SMART
             ''';
 
     var response = await ApiService.DbExplorer(vsql);
@@ -311,7 +311,7 @@ class _SelectOrdensState extends State<SelectOrdens> {
     return Scaffold(
       appBar: AppBar(
         title: Padding(
-          padding: EdgeInsets.all(60),
+          padding: EdgeInsets.all(100),
           child: Image.asset(
             "assets/logoalynebranco.png",
             height: 50,
@@ -322,13 +322,23 @@ class _SelectOrdensState extends State<SelectOrdens> {
         elevation: 15,
         actions: [
           Container(
-            padding: EdgeInsets.only(left: 170, right: 170),
+            padding: EdgeInsets.only(left: 100, right: 100),
             decoration: BoxDecoration(color: Colors.white),
             child: Center(
                 child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                Text(
+                  "Ordem de Produção",
+                  style: TextStyle(
+                      color: Color(0xFF2A53A1),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                ),
+                SizedBox(
+                  width: 100,
+                ),
                 Text(
                   " ${widget.cod_centro} - ${widget.centro}",
                   style: TextStyle(
@@ -364,23 +374,6 @@ class _SelectOrdensState extends State<SelectOrdens> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      alignment: Alignment.center,
-                      width: 300,
-                      padding: EdgeInsets.all(10),
-                      margin: EdgeInsets.only(bottom: 30, top: 30),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border:
-                              Border.all(color: Color(0xFF2A53A1), width: 3)),
-                      child: Text(
-                        "Ordem de Produção",
-                        style: TextStyle(
-                            color: Color(0xFF2A53A1),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20),
-                      ),
-                    ),
                     Container(
                       width: 700,
                       padding: EdgeInsets.all(20),
@@ -515,7 +508,7 @@ class _SelectOrdensState extends State<SelectOrdens> {
                             ),
                           ),
                           Container(
-                            margin: EdgeInsets.only(bottom: 10, top: 30),
+                            margin: EdgeInsets.only(bottom: 10, top: 10),
                             decoration: BoxDecoration(
                                 color: Colors.blueGrey,
                                 borderRadius: BorderRadius.circular(8)),
@@ -524,7 +517,7 @@ class _SelectOrdensState extends State<SelectOrdens> {
                               "Selecione a ordem para transferir",
                               style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold),
                             ),
                           ),

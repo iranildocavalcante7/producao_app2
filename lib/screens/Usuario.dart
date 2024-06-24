@@ -44,9 +44,12 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                   icon: Icon(Icons.edit),
                   onPressed: () {
                     // Implementar edição
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => UsuarioFormScreen(usuario: usuario),
-                    )).then((value) => _loadUsuarios());
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              UsuarioFormScreen(usuario: usuario),
+                        )).then((value) => _loadUsuarios());
                   },
                 ),
                 IconButton(
@@ -63,9 +66,11 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(
-            builder: (context) => UsuarioFormScreen(),
-          )).then((value) => _loadUsuarios());
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UsuarioFormScreen(),
+              )).then((value) => _loadUsuarios());
         },
         child: Icon(Icons.add),
       ),
@@ -99,7 +104,8 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.usuario == null ? 'Adicionar Usuário' : 'Editar Usuário'),
+        title: Text(
+            widget.usuario == null ? 'Adicionar Usuário' : 'Editar Usuário'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -111,7 +117,8 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                 initialValue: widget.usuario?.nome,
                 decoration: InputDecoration(labelText: 'Nome'),
                 onSaved: (value) => _nome = value!,
-                validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Campo obrigatório' : null,
               ),
               SizedBox(height: 20),
               ElevatedButton(

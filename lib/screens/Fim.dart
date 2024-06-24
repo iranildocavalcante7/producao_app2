@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'centrotrab_screen.dart';
+import 'SelectCentro.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'package:xml/xml.dart' as xml;
@@ -383,7 +383,7 @@ class _FimFluxoState extends State<FimFluxo> {
     jsessionid = jsessionid.split('=')[1];
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254:8280';
 
     var _url =
         '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.criarApontamento&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
@@ -509,7 +509,7 @@ class _FimFluxoState extends State<FimFluxo> {
     jsessionid = jsessionid.split('=')[1];
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254:8280';
 
     var _url =
         '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.liberarCentroDeTrabalho&counter=4040370301&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
@@ -656,7 +656,7 @@ class _FimFluxoState extends State<FimFluxo> {
     //jsessionid = jsessionid.split('=')[1];
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254:8280';
 
     var _url =
         '${_servidor}/mge/service.sbr?serviceName=CRUDServiceProvider.saveRecord&application=OperacaoProducao&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';

@@ -188,7 +188,7 @@ class _DetalhesOpState extends State<DetalhesOp> {
     jsessionid = jsessionid.split('=')[1];
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254:8280';
 
     var _url =
         '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.iniciarInstanciaAtividades&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
@@ -253,7 +253,7 @@ class _DetalhesOpState extends State<DetalhesOp> {
     jsessionid = jsessionid.split('=')[1];
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254:8280';
 
     var _url =
         '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.continuarInstanciaAtividades&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';
@@ -319,7 +319,7 @@ class _DetalhesOpState extends State<DetalhesOp> {
     jsessionid = jsessionid.split('=')[1];
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254:8280';
 
     var _url =
         '${_servidor}/mgeprod/service.sbr?serviceName=OperacaoProducaoSP.liberarCentroDeTrabalho&counter=4040370301&application=OperacaoProducao&mgeSession=$jsessionid&resourceID=br.com.sankhya.producao.cad.OperacaoProducao';

@@ -10,7 +10,7 @@ import 'package:producao_app/Components/Temperatura.dart';
 import 'package:producao_app/screens/Fim.dart';
 //import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
-import 'package:producao_app/screens/centrotrab_screen.dart';
+import 'package:producao_app/screens/SelectCentro.dart';
 import '../Components/dropdown_popup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';

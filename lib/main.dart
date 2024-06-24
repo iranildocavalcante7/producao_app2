@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:producao_app/screens/centrotrab_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/usuario_screen.dart';
-import 'screens/confconn_screen.dart';
-
+import 'package:producao_app/screens/SelectCentro.dart';
+import 'screens/Login.dart';
+import 'screens/Usuario.dart';
+import 'screens/ConfConn.dart';
 
 void main() {
   runApp(MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   @override

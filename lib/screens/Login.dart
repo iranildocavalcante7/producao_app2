@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:producao_app/models/confconn.dart';
 import 'package:producao_app/models/usuario.dart';
 import 'package:producao_app/services/api_service.dart';
-import 'package:producao_app/screens/centrotrab_screen.dart';
+import 'package:producao_app/screens/SelectCentro.dart';
 import 'dart:async';
 import 'package:producao_app/services/api_usuario.dart';
 import 'package:producao_app/services/database_helper.dart';

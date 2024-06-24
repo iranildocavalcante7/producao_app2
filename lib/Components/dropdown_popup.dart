@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:producao_app/screens/centrotrab_screen.dart';
+import 'package:producao_app/screens/SelectCentro.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'package:xml/xml.dart' as xml;
@@ -78,7 +78,7 @@ class _DropdownPopupState extends State<DropdownPopup> {
     jsessionid = jsessionid.split('=')[1];
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254';
+    _servidor = prefs.getString('api_servidor') ?? 'http://10.0.0.254:8280';
 
     var _url =
         '${_servidor}/mgeprod/service.sbr?application=OperacaoProducao&mgeSession=${jsessionid}&serviceName=OperacaoProducaoSP.pararInstanciaAtividades';
